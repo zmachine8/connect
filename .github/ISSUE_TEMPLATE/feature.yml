@@ -1,0 +1,31 @@
+name: Feature task
+description: A small, reviewable product or technical change
+title: "[Feature] "
+labels: [feature]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the user-visible or project result, not only the code.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: "- [ ] Given ... when ... then ..."
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Planned checks
+      description: Unit, UI, manual, security or accessibility checks.
+  - type: dropdown
+    id: lead
+    attributes:
+      label: Coordinating Lead
+      options: [Product, Design, Development, Quality]
+    validations:
+      required: true
