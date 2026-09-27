@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "261685614615",
+    "project_id": "connect-f1a30",
+    "storage_bucket": "connect-f1a30.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:261685614615:android:c54ff3bbccc1fe6ced6452",
+        "android_client_info": {
+          "package_name": "ee.ut.connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCI3u5KvHnphU52NCHSlJJHRBOLlHmdDX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

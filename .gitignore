@@ -11,5 +11,4 @@ captures/
 *.aab
 *.jks
 *.keystore
-google-services.json
 secrets.properties
