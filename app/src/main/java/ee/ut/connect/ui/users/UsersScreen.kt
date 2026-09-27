@@ -22,15 +22,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ee.ut.connect.data.model.ConnectUser
-import ee.ut.connect.data.repository.FakeUserRepository
+import ee.ut.connect.data.repository.FirebaseUserRepository
 
 @Composable
 fun UsersRoute(
     onUserSelected: (ConnectUser) -> Unit,
     onSignOut: () -> Unit,
-    viewModel: UsersViewModel = viewModel { UsersViewModel(FakeUserRepository()) },
+    viewModel: UsersViewModel = viewModel { UsersViewModel(FirebaseUserRepository()) },
 ) {
-    UsersScreen(viewModel.uiState, onUserSelected, viewModel::loadUsers, onSignOut)
+    UsersScreen(viewModel.uiState, onUserSelected, viewModel::loadUsers, onSignOut = {
+        viewModel.stopObserving()
+        onSignOut()
+    })
 }
 
 @Composable
@@ -47,7 +50,7 @@ fun UsersScreen(
             Text("People", style = MaterialTheme.typography.headlineMedium)
             Button(onClick = onSignOut) { Text("Sign out") }
         }
-        Text("Choose someone to start a conversation.", modifier = Modifier.padding(bottom = 16.dp))
+        Text("Registered people", modifier = Modifier.padding(bottom = 16.dp))
         when (state) {
             UsersUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -58,7 +61,7 @@ fun UsersScreen(
             }
             is UsersUiState.Success -> if (state.users.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No people available yet")
+                    Text("No other registered people yet")
                 }
             } else LazyColumn {
                 items(state.users, key = { it.id }) { user ->
@@ -70,10 +73,7 @@ fun UsersScreen(
                         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer) {
                             Text(user.displayName.take(1).uppercase(), modifier = Modifier.padding(12.dp))
                         }
-                        Column(Modifier.weight(1f)) {
-                            Text(user.displayName, style = MaterialTheme.typography.titleMedium)
-                            Text(if (user.isOnline) "Online" else "Offline", style = MaterialTheme.typography.labelMedium)
-                        }
+                        Text(user.displayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         Text("Open", color = MaterialTheme.colorScheme.primary)
                     }
                     HorizontalDivider()
