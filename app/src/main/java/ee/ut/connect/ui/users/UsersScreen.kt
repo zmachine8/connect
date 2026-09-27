@@ -27,9 +27,10 @@ import ee.ut.connect.data.repository.FakeUserRepository
 @Composable
 fun UsersRoute(
     onUserSelected: (ConnectUser) -> Unit,
+    onSignOut: () -> Unit,
     viewModel: UsersViewModel = viewModel { UsersViewModel(FakeUserRepository()) },
 ) {
-    UsersScreen(viewModel.uiState, onUserSelected, viewModel::loadUsers)
+    UsersScreen(viewModel.uiState, onUserSelected, viewModel::loadUsers, onSignOut)
 }
 
 @Composable
@@ -37,10 +38,15 @@ fun UsersScreen(
     state: UsersUiState,
     onUserSelected: (ConnectUser) -> Unit,
     onRetry: () -> Unit,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize().padding(20.dp)) {
-        Text("People", style = MaterialTheme.typography.headlineMedium)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("People", style = MaterialTheme.typography.headlineMedium)
+            Button(onClick = onSignOut) { Text("Sign out") }
+        }
         Text("Choose someone to start a conversation.", modifier = Modifier.padding(bottom = 16.dp))
         when (state) {
             UsersUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
