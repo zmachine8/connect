@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.google.firebase.auth.FirebaseAuth
 import ee.ut.connect.ui.chat.ChatRoute
 import ee.ut.connect.ui.login.LoginRoute
 import ee.ut.connect.ui.users.UsersRoute
@@ -17,7 +18,9 @@ import kotlinx.serialization.Serializable
 @Composable
 fun ConnectApp() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = LoginDestination) {
+    val auth = FirebaseAuth.getInstance()
+    val startDestination = if (auth.currentUser == null) LoginDestination else UsersDestination
+    NavHost(navController = navController, startDestination = startDestination) {
         composable<LoginDestination> {
             LoginRoute {
                 navController.navigate(UsersDestination) {
@@ -27,6 +30,12 @@ fun ConnectApp() {
         }
         composable<UsersDestination> {
             UsersRoute(
+                onSignOut = {
+                    auth.signOut()
+                    navController.navigate(LoginDestination) {
+                        popUpTo(UsersDestination) { inclusive = true }
+                    }
+                },
                 onUserSelected = { user ->
                     navController.navigate(
                         ChatDestination(
