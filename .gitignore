@@ -12,3 +12,10 @@ captures/
 *.jks
 *.keystore
 secrets.properties
+
+# Firestore rule tests
+rules-tests/node_modules/
+rules-tests/firestore-debug.log
+
+rules-tests/node_modules/
+rules-tests/firestore-debug.log

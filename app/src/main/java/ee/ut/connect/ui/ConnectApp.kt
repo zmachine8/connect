@@ -8,11 +8,13 @@ import androidx.navigation.toRoute
 import com.google.firebase.auth.FirebaseAuth
 import ee.ut.connect.ui.chat.ChatRoute
 import ee.ut.connect.ui.login.LoginRoute
+import ee.ut.connect.ui.profile.ProfileRoute
 import ee.ut.connect.ui.users.UsersRoute
 import kotlinx.serialization.Serializable
 
 @Serializable data object LoginDestination
 @Serializable data object UsersDestination
+@Serializable data object ProfileDestination
 @Serializable data class ChatDestination(val userId: String, val displayName: String)
 
 @Composable
@@ -30,6 +32,7 @@ fun ConnectApp() {
         }
         composable<UsersDestination> {
             UsersRoute(
+                onOpenProfile = { navController.navigate(ProfileDestination) },
                 onSignOut = {
                     auth.signOut()
                     navController.navigate(LoginDestination) {
@@ -45,6 +48,9 @@ fun ConnectApp() {
                     )
                 },
             )
+        }
+        composable<ProfileDestination> {
+            ProfileRoute(onBack = navController::navigateUp)
         }
         composable<ChatDestination> { entry ->
             val destination = entry.toRoute<ChatDestination>()

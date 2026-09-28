@@ -28,9 +28,10 @@ import ee.ut.connect.data.repository.FirebaseUserRepository
 fun UsersRoute(
     onUserSelected: (ConnectUser) -> Unit,
     onSignOut: () -> Unit,
+    onOpenProfile: () -> Unit,
     viewModel: UsersViewModel = viewModel { UsersViewModel(FirebaseUserRepository()) },
 ) {
-    UsersScreen(viewModel.uiState, onUserSelected, viewModel::loadUsers, onSignOut = {
+    UsersScreen(viewModel.uiState, onUserSelected, viewModel::loadUsers, onOpenProfile, onSignOut = {
         viewModel.stopObserving()
         onSignOut()
     })
@@ -41,6 +42,7 @@ fun UsersScreen(
     state: UsersUiState,
     onUserSelected: (ConnectUser) -> Unit,
     onRetry: () -> Unit,
+    onOpenProfile: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -48,6 +50,7 @@ fun UsersScreen(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically) {
             Text("People", style = MaterialTheme.typography.headlineMedium)
+            Button(onClick = onOpenProfile) { Text("Profile") }
             Button(onClick = onSignOut) { Text("Sign out") }
         }
         Text("Registered people", modifier = Modifier.padding(bottom = 16.dp))
