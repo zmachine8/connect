@@ -1,5 +1,15 @@
 package ee.ut.connect.ui.users
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.shape.CutCornerShape
+import ee.ut.connect.ui.theme.CopperDivider
+import ee.ut.connect.ui.theme.FantasyBackdrop
+import ee.ut.connect.ui.theme.InitialAvatar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -46,40 +57,43 @@ fun UsersScreen(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxSize().padding(20.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-            Text("People", style = MaterialTheme.typography.headlineMedium)
-            Button(onClick = onOpenProfile) { Text("Profile") }
-            Button(onClick = onSignOut) { Text("Sign out") }
-        }
-        Text("Registered people", modifier = Modifier.padding(bottom = 16.dp))
-        when (state) {
-            UsersUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    FantasyBackdrop {
+        Column(modifier.fillMaxSize().safeDrawingPadding().padding(20.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("People", style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                TextButton(onClick = onOpenProfile) { Text("Profile") }
+                TextButton(onClick = onSignOut) { Text("Sign out") }
             }
-            is UsersUiState.Error -> {
-                Text(state.message, color = MaterialTheme.colorScheme.error)
-                Button(onClick = onRetry) { Text("Try again") }
-            }
-            is UsersUiState.Success -> if (state.users.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No other registered people yet")
+            CopperDivider(Modifier.padding(top = 8.dp, bottom = 20.dp))
+            when (state) {
+                UsersUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-            } else LazyColumn {
-                items(state.users, key = { it.id }) { user ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { onUserSelected(user) }.padding(vertical = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer) {
-                            Text(user.displayName.take(1).uppercase(), modifier = Modifier.padding(12.dp))
-                        }
-                        Text(user.displayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        Text("Open", color = MaterialTheme.colorScheme.primary)
+                is UsersUiState.Error -> {
+                    Text(state.message, color = MaterialTheme.colorScheme.error)
+                    Button(onClick = onRetry) { Text("Try again") }
+                }
+                is UsersUiState.Success -> if (state.users.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No other registered people yet")
                     }
-                    HorizontalDivider()
+                } else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(state.users, key = { it.id }) { user ->
+                        Surface(shape = CutCornerShape(8.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = .94f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f))) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { onUserSelected(user) }.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            InitialAvatar(user.displayName)
+                            Text(user.displayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            Text("›", color = MaterialTheme.colorScheme.primary)
+                        }
+                        }
+                    }
                 }
             }
         }

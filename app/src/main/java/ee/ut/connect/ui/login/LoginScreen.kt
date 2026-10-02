@@ -1,5 +1,19 @@
 package ee.ut.connect.ui.login
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.TextButton
+import ee.ut.connect.ui.theme.CopperDivider
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import ee.ut.connect.ui.theme.EmberButton
+import ee.ut.connect.ui.theme.fantasyFieldColors
+import androidx.compose.foundation.shape.CutCornerShape
+import ee.ut.connect.ui.theme.FantasyBackdrop
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -114,49 +128,61 @@ fun LoginScreen(
     onCreateAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text("Connect", style = MaterialTheme.typography.displaySmall)
-        Text("Private conversations with people you know", modifier = Modifier.padding(vertical = 16.dp))
-        OutlinedTextField(
-            value = displayName,
-            onValueChange = onDisplayNameChanged,
-            label = { Text("Display name (new accounts)") },
-            singleLine = true,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = email,
-            onValueChange = onEmailChanged,
-            label = { Text("Email") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = password,
-            onValueChange = onPasswordChanged,
-            label = { Text("Password") },
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        )
-        if (error != null) {
-            Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 12.dp))
-        }
-        if (busy) CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
-        Button(onClick = onSignIn, enabled = !busy, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-            Text("Sign in")
-        }
-        OutlinedButton(onClick = onCreateAccount, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text("Create account")
+    var creatingAccount by remember { mutableStateOf(false) }
+    FantasyBackdrop(login = true) {
+        Column(
+            modifier = modifier.fillMaxSize().safeDrawingPadding().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom,
+        ) {
+            Spacer(Modifier.height(230.dp))
+            Text("Connect", style = MaterialTheme.typography.displaySmall)
+            Text("PEOPLE · IDEAS · TOGETHER", style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp, bottom = 24.dp))
+            if (creatingAccount) OutlinedTextField(
+                colors = fantasyFieldColors(),
+                shape = CutCornerShape(6.dp),
+                value = displayName,
+                onValueChange = onDisplayNameChanged,
+                label = { Text("Display name") },
+                singleLine = true,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                colors = fantasyFieldColors(),
+                shape = CutCornerShape(6.dp),
+                value = email,
+                onValueChange = onEmailChanged,
+                label = { Text("Email") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                colors = fantasyFieldColors(),
+                shape = CutCornerShape(6.dp),
+                value = password,
+                onValueChange = onPasswordChanged,
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            if (error != null) {
+                Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 12.dp))
+            }
+            if (busy) CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
+            EmberButton(onClick = { if (creatingAccount) onCreateAccount() else onSignIn() }, enabled = !busy, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                Text(if (creatingAccount) "Create account" else "Sign in  →", style = MaterialTheme.typography.titleLarge)
+            }
+            CopperDivider(Modifier.padding(top = 20.dp, bottom = 8.dp))
+            TextButton(onClick = { creatingAccount = !creatingAccount }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                Text(if (creatingAccount) "Back to sign in" else "Create account")
+            }
         }
     }
 }
