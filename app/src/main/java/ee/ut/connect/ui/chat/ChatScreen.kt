@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import ee.ut.connect.ui.theme.EmberButton
 import ee.ut.connect.ui.theme.fantasyFieldColors
 import androidx.compose.foundation.shape.CutCornerShape
+import ee.ut.connect.ui.theme.AdaptiveContent
 import ee.ut.connect.ui.theme.FantasyBackdrop
 import ee.ut.connect.ui.theme.InitialAvatar
 import androidx.compose.foundation.Image
@@ -51,6 +52,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,20 +71,22 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.createSavedStateHandle
 import ee.ut.connect.data.repository.FirestoreChatRepository
 import com.google.firebase.auth.FirebaseAuth
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-private data class SelectedDocument(val name: String, val mimeType: String, val bytes: ByteArray)
+internal data class SelectedDocument(val name: String, val mimeType: String, val bytes: ByteArray)
 
 @Composable
 fun ChatRoute(userId: String, displayName: String, onBack: () -> Unit) {
-    val viewModel: ChatViewModel = viewModel(key = userId) { ChatViewModel(userId, FirestoreChatRepository()) }
+    val viewModel: ChatViewModel = viewModel(key = userId) { ChatViewModel(userId, FirestoreChatRepository(), createSavedStateHandle()) }
     val context = LocalContext.current
-    var captured by remember { mutableStateOf<Bitmap?>(null) }
-    var pendingFile by remember { mutableStateOf<File?>(null) }
-    var selectedDocument by remember { mutableStateOf<SelectedDocument?>(null) }
+    val attachments: AttachmentViewModel = viewModel(key = "attachments-$userId")
+    var captured by attachments::captured
+    var pendingFile by attachments::pendingFile
+    var selectedDocument by attachments::selectedDocument
     fun shareLocation() {
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         val provider = when {
@@ -240,118 +244,120 @@ fun ChatScreen(
         if (lastMessageId != null) listState.animateScrollToItem(state.messages.lastIndex)
     }
     FantasyBackdrop(chat = true) {
-        Column(modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                IconButton(onClick = onBack, modifier = Modifier.semantics { contentDescription = "Back" }) { Text("←", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary) }
-                InitialAvatar(displayName, Modifier.padding(start = 8.dp))
-                Text(displayName, style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(start = 12.dp, top = 12.dp))
-            }
-            CopperDivider(Modifier.padding(top = 8.dp))
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(state.messages, key = { it.id }) { message ->
-                    val mine = message.senderId == FirebaseAuth.getInstance().currentUser?.uid
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
-                    ) {
-                        Surface(
-                            modifier = Modifier.widthIn(max = 300.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f)),
-                            shape = MaterialTheme.shapes.medium,
-                            color = if (mine) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant,
+        AdaptiveContent(modifier) { compact ->
+            Column(Modifier.align(Alignment.TopCenter).widthIn(max = 960.dp).fillMaxSize().padding(if (compact) 4.dp else 16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack, modifier = Modifier.semantics { contentDescription = "Back" }) { Text("←", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary) }
+                    if (!compact) InitialAvatar(displayName, Modifier.padding(start = 8.dp))
+                    Text(displayName, style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(start = 12.dp))
+                }
+                if (!compact) CopperDivider(Modifier.padding(top = 8.dp))
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = if (compact) 4.dp else 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 12.dp),
+                ) {
+                    if (state.messages.isEmpty() && !state.loading) item {
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Text("No messages yet") }
+                    }
+                    items(state.messages, key = { it.id }) { message ->
+                        val mine = message.senderId == FirebaseAuth.getInstance().currentUser?.uid
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
                         ) {
-                            if (message.documentBytes != null) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text("📄 ${message.documentName ?: "Document"}")
-                                    if (message.text.isNotBlank()) Text(message.text)
+                            Surface(
+                                modifier = Modifier.widthIn(max = 300.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f)),
+                                shape = MaterialTheme.shapes.medium,
+                                color = if (mine) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant,
+                            ) {
+                                if (message.documentBytes != null) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text("📄 ${message.documentName ?: "Document"}")
+                                        if (message.text.isNotBlank()) Text(message.text)
+                                        TextButton(onClick = {
+                                            val file = File(context.cacheDir, "photos/${message.id}").apply {
+                                                parentFile?.mkdirs(); writeBytes(message.documentBytes)
+                                            }
+                                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                setDataAndType(uri, message.documentMimeType ?: "application/octet-stream")
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            try { context.startActivity(intent) } catch (_: Exception) { }
+                                        }) { Text("Open") }
+                                    }
+                                } else if (message.latitude != null && message.longitude != null) {
                                     TextButton(onClick = {
-                                        val file = File(context.cacheDir, "photos/${message.id}").apply {
-                                            parentFile?.mkdirs(); writeBytes(message.documentBytes)
-                                        }
-                                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri, message.documentMimeType ?: "application/octet-stream")
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        try { context.startActivity(intent) } catch (_: Exception) { }
-                                    }) { Text("Open") }
-                                }
-                            } else if (message.latitude != null && message.longitude != null) {
-                                TextButton(onClick = {
-                                    val geo = Uri.parse("geo:${message.latitude},${message.longitude}?q=${message.latitude},${message.longitude}")
-                                    try { context.startActivity(Intent(Intent.ACTION_VIEW, geo)) } catch (_: Exception) { }
-                                }) { Text("📍 View location") }
-                            } else if (message.imageBytes == null) {
-                                Text(message.text, modifier = Modifier.padding(16.dp))
-                            } else {
-                                val bytes = message.imageBytes
-                                val bitmap = remember(message.id) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
-                                Column {
-                                    if (bitmap != null) Image(bitmap.asImageBitmap(), contentDescription = "Chat photo",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.widthIn(max = 240.dp).heightIn(max = 320.dp)
-                                            .size(
-                                                (240f * bitmap.width / maxOf(bitmap.width, bitmap.height)).dp,
-                                                (240f * bitmap.height / maxOf(bitmap.width, bitmap.height)).dp,
-                                            ))
-                                    else Text("Could not display photo", modifier = Modifier.padding(12.dp))
-                                    if (message.text.isNotBlank()) Text(message.text, modifier = Modifier.padding(12.dp))
+                                        val geo = Uri.parse("geo:${message.latitude},${message.longitude}?q=${message.latitude},${message.longitude}")
+                                        try { context.startActivity(Intent(Intent.ACTION_VIEW, geo)) } catch (_: Exception) { }
+                                    }) { Text("📍 View location") }
+                                } else if (message.imageBytes == null) {
+                                    Text(message.text, modifier = Modifier.padding(16.dp))
+                                } else {
+                                    val bytes = message.imageBytes
+                                    val bitmap = remember(message.id) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+                                    Column {
+                                        if (bitmap != null) Image(bitmap.asImageBitmap(), contentDescription = "Chat photo",
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.widthIn(max = 240.dp).heightIn(max = 320.dp)
+                                                .size(
+                                                    (240f * bitmap.width / maxOf(bitmap.width, bitmap.height)).dp,
+                                                    (240f * bitmap.height / maxOf(bitmap.width, bitmap.height)).dp,
+                                                ))
+                                        else Text("Could not display photo", modifier = Modifier.padding(12.dp))
+                                        if (message.text.isNotBlank()) Text(message.text, modifier = Modifier.padding(12.dp))
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            if (state.loading) CircularProgressIndicator()
-            if (state.error != null) Text(state.error, color = MaterialTheme.colorScheme.error)
-            if (state.uploading) Text("Uploading attachment…")
-            if (state.messages.isEmpty()) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Text("No messages yet") }
-            }
-            if (photoPreview != null) Row(verticalAlignment = Alignment.Top) {
-                Image(photoPreview.asImageBitmap(), contentDescription = "Selected photo", modifier = Modifier.size(80.dp))
-                IconButton(onClick = onCancelPhoto, enabled = !state.uploading) {
-                    Text("×", style = MaterialTheme.typography.titleLarge)
-                }
-            }
-            if (documentName != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("📄 $documentName", modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                IconButton(onClick = onCancelDocument, enabled = !state.uploading) { Text("×") }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom,
-                modifier = Modifier.fillMaxWidth().background(Color(0xF2171614), CutCornerShape(8.dp)).padding(6.dp)) {
-                Box {
-                    IconButton(modifier = Modifier.semantics { contentDescription = "Add attachment" }, onClick = { menuExpanded = true }, enabled = !state.loading && !state.uploading) {
-                        Text("+", style = MaterialTheme.typography.headlineMedium)
-                    }
-                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                        DropdownMenuItem(text = { Text("Photos") }, onClick = { menuExpanded = false; onPickPhoto() })
-                        DropdownMenuItem(text = { Text("Camera") }, onClick = { menuExpanded = false; onCapture() })
-                        DropdownMenuItem(text = { Text("Location") }, onClick = { menuExpanded = false; onShareLocation() })
-                        DropdownMenuItem(text = { Text("Document") }, onClick = { menuExpanded = false; onPickDocument() })
+                if (state.loading) CircularProgressIndicator()
+                if (state.error != null) Text(state.error, color = MaterialTheme.colorScheme.error, maxLines = if (compact) 2 else 4, overflow = TextOverflow.Ellipsis)
+                if (state.uploading) Text("Uploading attachment…")
+                if (photoPreview != null) Row(verticalAlignment = Alignment.Top) {
+                    Image(photoPreview.asImageBitmap(), contentDescription = "Selected photo", modifier = Modifier.size(if (compact) 48.dp else 80.dp))
+                    IconButton(onClick = onCancelPhoto, enabled = !state.uploading) {
+                        Text("×", style = MaterialTheme.typography.titleLarge)
                     }
                 }
-                OutlinedTextField(
-                colors = fantasyFieldColors(),
-                shape = CutCornerShape(6.dp),
-                    value = state.draft,
-                    onValueChange = onDraftChanged,
-                    placeholder = { Text(if (photoPreview == null && documentName == null) "Message" else "Add a caption") },
-                    maxLines = 4,
-                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-                )
-                EmberButton(onClick = {
-                    keyboardController?.hide()
-                    focusManager.clearFocus()
-                    onSend()
-                }, modifier = Modifier.semantics { contentDescription = "Send message" }, enabled = !state.loading && !state.sending && !state.uploading && (state.draft.isNotBlank() || photoPreview != null || documentName != null)) { Text("➤") }
+                if (documentName != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📄 $documentName", modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    IconButton(onClick = onCancelDocument, enabled = !state.uploading) { Text("×") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom,
+                    modifier = Modifier.fillMaxWidth().background(Color(0xF2171614), CutCornerShape(8.dp)).padding(6.dp)) {
+                    Box {
+                        IconButton(modifier = Modifier.semantics { contentDescription = "Add attachment" }, onClick = { menuExpanded = true }, enabled = !state.loading && !state.uploading) {
+                            Text("+", style = MaterialTheme.typography.headlineMedium)
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(text = { Text("Photos") }, onClick = { menuExpanded = false; onPickPhoto() })
+                            DropdownMenuItem(text = { Text("Camera") }, onClick = { menuExpanded = false; onCapture() })
+                            DropdownMenuItem(text = { Text("Location") }, onClick = { menuExpanded = false; onShareLocation() })
+                            DropdownMenuItem(text = { Text("Document") }, onClick = { menuExpanded = false; onPickDocument() })
+                        }
+                    }
+                    OutlinedTextField(
+                    colors = fantasyFieldColors(),
+                    shape = CutCornerShape(6.dp),
+                        value = state.draft,
+                        onValueChange = onDraftChanged,
+                        placeholder = { Text(if (photoPreview == null && documentName == null) "Message" else "Add a caption") },
+                        maxLines = if (compact) 1 else 4,
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    )
+                    EmberButton(onClick = {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                        onSend()
+                    }, modifier = Modifier.semantics { contentDescription = "Send message" }, enabled = !state.loading && !state.sending && !state.uploading && (state.draft.isNotBlank() || photoPreview != null || documentName != null)) { Text("➤") }
+                }
             }
         }
     }

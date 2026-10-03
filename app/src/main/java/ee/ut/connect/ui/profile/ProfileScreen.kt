@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import ee.ut.connect.ui.theme.EmberButton
 import ee.ut.connect.ui.theme.fantasyFieldColors
 import androidx.compose.foundation.shape.CutCornerShape
+import ee.ut.connect.ui.theme.AdaptiveContent
 import ee.ut.connect.ui.theme.FantasyBackdrop
 import ee.ut.connect.ui.theme.InitialAvatar
 import androidx.compose.foundation.layout.Arrangement
@@ -19,60 +20,43 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun ProfileRoute(onBack: () -> Unit) {
-    val uid = remember { FirebaseAuth.getInstance().currentUser?.uid }
-    val firestore = remember { FirebaseFirestore.getInstance() }
-    var name by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
-    DisposableEffect(uid) {
-        val registration = uid?.let { id ->
-            firestore.collection("users").document(id).addSnapshotListener { snapshot, error ->
-                if (error != null) message = error.localizedMessage
-                else if (snapshot != null && !busy) name = snapshot.getString("displayName").orEmpty()
-            }
-        }
-        onDispose { registration?.remove() }
-    }
+    val viewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     FantasyBackdrop {
-        Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onBack) { Text("Back") }
-            Text("Your profile", style = MaterialTheme.typography.headlineMedium)
-            InitialAvatar(name)
-            OutlinedTextField(
-                colors = fantasyFieldColors(),
-                shape = CutCornerShape(6.dp),
-                value = name,
-                onValueChange = { name = it; message = null },
-                label = { Text("Display name") },
-                enabled = !busy,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            EmberButton(onClick = {
-                val trimmed = name.trim()
-                if (uid == null || trimmed.length !in 2..40 || trimmed.contains('\n')) {
-                    message = "Use a display name of 2 to 40 characters."
-                } else {
-                    busy = true
-                    firestore.collection("users").document(uid).update("displayName", trimmed)
-                        .addOnSuccessListener { busy = false; name = trimmed; message = "Saved" }
-                        .addOnFailureListener { busy = false; message = it.localizedMessage ?: "Could not save" }
+        AdaptiveContent { compact ->
+            Column(Modifier.align(Alignment.TopCenter).widthIn(max = 560.dp).fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).padding(if (compact) 12.dp else 24.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = onBack) { Text("Back") }
+                    Text("Your profile", style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (compact) InitialAvatar(viewModel.name, Modifier.size(40.dp))
                 }
-            }, enabled = !busy) { Text("Save") }
-            if (message != null) Text(message.orEmpty())
+                if (!compact) InitialAvatar(viewModel.name)
+                OutlinedTextField(
+                    colors = fantasyFieldColors(),
+                    shape = CutCornerShape(6.dp),
+                    value = viewModel.name,
+                    onValueChange = viewModel::updateName,
+                    label = { Text("Display name") },
+                    enabled = !viewModel.busy && !viewModel.loading,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                EmberButton(onClick = viewModel::save, enabled = !viewModel.busy && !viewModel.loading) { Text("Save") }
+                if (viewModel.loading) Text("Loading profile…")
+                if (viewModel.message != null) Text(viewModel.message.orEmpty())
+            }
         }
     }
 }
