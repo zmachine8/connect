@@ -74,6 +74,9 @@ fun LoginScreen(
     onCreateAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    androidx.activity.compose.BackHandler(enabled = creatingAccount && !busy) {
+        onToggleMode()
+    }
     FantasyBackdrop(login = true) {
         AdaptiveContent(modifier) { compact ->
             Column(
@@ -81,7 +84,10 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Bottom,
             ) {
-                if (!compact) Spacer(Modifier.height(96.dp))
+                if (creatingAccount) TextButton(onClick = onToggleMode, enabled = !busy) {
+                    Text("← Back to sign in")
+                }
+                if (!compact && !creatingAccount) Spacer(Modifier.height(96.dp))
                 Text("Connect", style = if (compact) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall)
                 Text("PEOPLE · IDEAS · TOGETHER", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp, bottom = if (compact) 12.dp else 24.dp))
