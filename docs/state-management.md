@@ -23,4 +23,8 @@ An in-flight write cannot be resumed by SavedStateHandle after process death. Ch
 
 ## Automated checks
 
-Run `./gradlew testDebugUnitTest lintDebug assembleDebug` and the existing Firestore rules tests. The implementation environment could not download Gradle from services.gradle.org, so compilation, lint, and Android runtime behavior still require local verification.
+Run `./gradlew testDebugUnitTest lintDebug assembleDebug` and the existing Firestore rules tests. The development session reported working builds and rotation/landscape behaviour after fixing a LoginViewModel indentation lint error. Record the final command output and device/API configuration before submission; explicit process-death, failure and multi-account scenarios remain separate checks.
+
+## Related UI updates
+
+AdaptiveContent measures usable height after system bars and keyboard insets. Below 480 dp, screens use compact spacing; forms have maximum widths, chat previews shrink, and the message field uses one line. Create-account mode has a top return control and Android Back handling when authentication is not busy. These are layout/navigation improvements, separate from state lifetime.

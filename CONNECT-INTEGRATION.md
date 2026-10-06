@@ -1,6 +1,6 @@
-# Connect: profile, chat, and photo change
+# Connect: Firebase integration and prototype limits
 
-Apply this follow-up archive on `feature/chat-profile-photos`, preserving directory structure. It updates the chat screen, model, repository, manifest, Firestore rules, and rules tests. No billing upgrade or Cloud Storage bucket is needed.
+This document describes the current integrated prototype, including profile editing, private chat, photos, documents and approximate location. Attachment data is stored inside Firestore message documents; no Cloud Storage bucket is used.
 
 Run on the development machine:
 
