@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.firestore.ListenerRegistration
 import ee.ut.connect.data.model.ChatMessage
 import ee.ut.connect.data.repository.FirestoreChatRepository
@@ -17,8 +18,8 @@ data class ChatUiState(
     val error: String? = null,
 )
 
-class ChatViewModel(otherId: String, private val repository: FirestoreChatRepository) : ViewModel() {
-    var uiState by mutableStateOf(ChatUiState())
+class ChatViewModel(otherId: String, private val repository: FirestoreChatRepository, private val savedState: SavedStateHandle) : ViewModel() {
+    var uiState by mutableStateOf(ChatUiState(draft = savedState.get<String>("draft") ?: ""))
         private set
     private var chatId: String? = null
     private var listener: ListenerRegistration? = null
@@ -42,7 +43,7 @@ class ChatViewModel(otherId: String, private val repository: FirestoreChatReposi
         }
     }
 
-    fun updateDraft(value: String) { uiState = uiState.copy(draft = value) }
+    fun updateDraft(value: String) { uiState = uiState.copy(draft = value); savedState["draft"] = value }
 
     fun send() {
         val id = chatId ?: return
@@ -55,6 +56,7 @@ class ChatViewModel(otherId: String, private val repository: FirestoreChatReposi
                 draft = if (uiState.draft.trim() == text) "" else uiState.draft,
                 sending = false)
             else uiState.copy(sending = false, error = result.exceptionOrNull()?.localizedMessage)
+            savedState["draft"] = uiState.draft
         }
     }
 
@@ -68,6 +70,7 @@ class ChatViewModel(otherId: String, private val repository: FirestoreChatReposi
             uiState = uiState.copy(uploading = false,
                 draft = if (result.isSuccess && uiState.draft.trim() == caption) "" else uiState.draft,
                 error = result.exceptionOrNull()?.localizedMessage)
+            savedState["draft"] = uiState.draft
             onComplete(result.isSuccess)
         }
     }
@@ -82,6 +85,7 @@ class ChatViewModel(otherId: String, private val repository: FirestoreChatReposi
             uiState = uiState.copy(uploading = false,
                 draft = if (result.isSuccess && uiState.draft.trim() == caption) "" else uiState.draft,
                 error = result.exceptionOrNull()?.localizedMessage)
+            savedState["draft"] = uiState.draft
             onComplete(result.isSuccess)
         }
     }

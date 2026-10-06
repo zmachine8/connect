@@ -1,61 +1,79 @@
 # Connect
 
-Connect is a native Android prototype for private one-to-one communication. Its MVP path is:
+Connect is a native Android course prototype for private one-to-one communication. The main flow is **sign in or create an account → People → Chat → send text or an attachment**.
 
-1. account and login;
-2. registered-user directory;
-3. private text chat;
-4. camera-captured photo sharing.
+## Current state: Stage 2 / Design
 
-Feeds, likes, comments, stories, calls, groups, recommendations, advertising and monetisation are outside the scope.
+Implemented in the current source:
 
-## Current state — Week 3
+- Firebase email/password registration, sign in, session-based start destination and sign out;
+- Firestore profiles and a live People directory excluding the current user;
+- editing your own display name;
+- deterministic private conversations and persistent text messages;
+- camera/gallery photo selection, preview and captions;
+- document sharing up to 200,000 bytes and one approximate location per share action;
+- dark fantasy Compose theme, licensed Cinzel/Lato fonts and adaptive launcher icon;
+- compact layouts based on available height, including keyboard insets;
+- screen ViewModels, saved chat/profile drafts and attachment cache references;
+- Android CI for unit tests, lint and debug builds, plus separate Firestore emulator rules tests.
 
-The repository currently contains the shared project foundation:
+This is a prototype, not a finished release. Only the latest 30 messages are loaded; there is no pagination, push notification, search, groups, profile-photo upload or end-to-end encryption. See [integration and limitations](CONNECT-INTEGRATION.md).
 
-- Kotlin and Jetpack Compose Android application;
-- Login → Users → Chat prototype navigation;
-- fake local users and messages, so the UI can be developed before Firebase;
-- UI → ViewModel → Repository separation;
-- loading, success, error and retry state structure for the user list;
-- one unit test;
-- GitHub Actions build, lint and test checks;
-- team workflow and Lead-role instructions in [`WORK/`](WORK/README.md).
+## Build and run
 
-Authentication, Firestore, Firebase Storage and the camera are intentionally not implemented yet.
+Use Android Studio, Android SDK API 36 and an emulator/device with Android 8.0 (API 26) or newer. The application ID is `ee.ut.connect`.
 
-## Run locally
+The CI uses JDK 17. JDK 21 is the locally tested command-line option; do not assume the system's newest Java version works with Gradle 8.13.
 
-Requirements: Android Studio, JDK 17 and an Android SDK with API 36.
+1. Clone the repository and check out the branch to review.
+2. Open the repository in Android Studio and set the Gradle JDK to a supported version.
+3. Check that `app/google-services.json` corresponds to the intended Firebase development project. This client configuration is present in the repository; do not replace it with service-account credentials.
+4. In that Firebase project, enable Email/Password authentication and create a Firestore database.
+5. Publish the repository's `firestore.rules` using Firebase Console → Firestore Database → Rules. Committing this file does not deploy it.
+6. Sync Gradle and run the `app` configuration.
 
-1. Clone the repository.
-2. Open its root folder in Android Studio.
-3. Let Gradle sync.
-4. Create or select an emulator running Android 8.0/API 26 or newer.
-5. Run the `app` configuration.
+No Firebase Cloud Storage bucket is used. Photos and documents are capped and stored as Firestore blobs. This avoids requiring a Storage billing upgrade, but usage still depends on Firebase project quotas; it is not a guarantee of unlimited free service.
 
-Command-line checks:
+Local checks on Arch Linux:
 
 ```bash
-./gradlew testDebugUnitTest
-./gradlew lintDebug
-./gradlew assembleDebug
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk \
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-## Architecture
+Firestore rules tests (Node.js/npm and a compatible Java runtime are required):
 
-```text
-Compose UI → ViewModel → Repository → local/remote data source
+```bash
+cd rules-tests
+npm ci
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk npm test
 ```
 
-Screens must not access Firebase directly. See [`WORK/ARCHITECTURE.md`](WORK/ARCHITECTURE.md).
+These tests use the `demo-connect` emulator project, not production data. They run separately from Android CI.
 
-## Team
+## Architecture and state
 
-- Raigo Leesment
-- Mairon Mihkelsoo
-- Robin Murumets
-- Kermo Mätlik
-- Reimo Zukker
+- [Current architecture](docs/architecture.md)
+- [State lifetime and recreation checks](docs/state-management.md)
+- [Test procedure and evidence](docs/testing.md)
 
-Stage assignments belong in [`WORK/ROLE-ROTATION.md`](WORK/ROLE-ROTATION.md).
+Compose renders observable state. Users and Chat use Firebase repositories. Login and Profile own Firebase operations directly in their ViewModels; repository extraction remains a maintainability improvement. Camera, pickers, location and external file opening remain at the Android/UI boundary. This accurately describes the implementation; it does not claim every Firebase access already follows an interface-based repository layer.
+
+## Team and workflow
+
+Raigo Leesment, Mairon Mihkelsoo, Robin Murumets, Kermo Mätlik and Reimo Zukker.
+
+Stage 2 responsibilities:
+
+| Role | Member |
+|---|---|
+| Product Co-Leads | Mairon Mihkelsoo and Robin Murumets |
+| Design Lead | Kermo Mätlik |
+| Quality Lead | Raigo Leesment |
+| Development Lead | Reimo Zukker |
+
+Roles rotate between stages. Members contribute through implementation, testing and peer review across role boundaries. Develop on feature branches, run checks, request peer review and merge through a pull request.
+
+## Assets and attribution
+
+Cinzel and Lato font licence files are in `docs/font-licenses/`. The launcher icon was authored as Android vectors with AI assistance. The fantasy backgrounds were added during the design work; record their generation/source and applicable use rights before release. AI-assisted changes must be understood, reviewed and tested by the team.
