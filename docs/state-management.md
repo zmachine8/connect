@@ -23,7 +23,7 @@ An in-flight write cannot be resumed by SavedStateHandle after process death. Ch
 
 ## Automated checks
 
-Run `./gradlew testDebugUnitTest lintDebug assembleDebug` and the existing Firestore rules tests. The development session reported working builds and rotation/landscape behaviour after fixing a LoginViewModel indentation lint error. Record the final command output and device/API configuration before submission; explicit process-death, failure and multi-account scenarios remain separate checks.
+Run `./gradlew testDebugUnitTest lintDebug assembleDebug` and the existing Firestore rules tests. The latest reported local verification passed testDebugUnitTest, lintDebug and assembleDebug. Emulator testing confirmed rotation/landscape improvements. Explicit process-recreation, failure and multi-account scenarios remain separate checks. See [testing](testing.md).
 
 ## Related UI updates
 

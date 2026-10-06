@@ -53,10 +53,9 @@ These tests use the `demo-connect` emulator project, not production data. They r
 
 ## Architecture and state
 
-- [Current architecture](WORK/ARCHITECTURE.md)
+- [Current architecture](docs/architecture.md)
 - [State lifetime and recreation checks](docs/state-management.md)
-- [Test procedure and evidence](WORK/TESTS-AND-CHECKS.md)
-- [Course stages and outstanding work](WORK/COURSE-ROADMAP.md)
+- [Test procedure and evidence](docs/testing.md)
 
 Compose renders observable state. Users and Chat use Firebase repositories. Login and Profile own Firebase operations directly in their ViewModels; repository extraction remains a maintainability improvement. Camera, pickers, location and external file opening remain at the Android/UI boundary. This accurately describes the implementation; it does not claim every Firebase access already follows an interface-based repository layer.
 
@@ -64,7 +63,16 @@ Compose renders observable state. Users and Chat use Firebase repositories. Logi
 
 Raigo Leesment, Mairon Mihkelsoo, Robin Murumets, Kermo Mätlik and Reimo Zukker.
 
-Develop on feature branches, run checks, request peer review and merge through a pull request. [Team handbook](WORK/README.md) · [Role rotation](WORK/ROLE-ROTATION.md).
+Stage 2 responsibilities:
+
+| Role | Member |
+|---|---|
+| Product Co-Leads | Mairon Mihkelsoo and Robin Murumets |
+| Design Lead | Kermo Mätlik |
+| Quality Lead | Raigo Leesment |
+| Development Lead | Reimo Zukker |
+
+Roles rotate between stages. Members contribute through implementation, testing and peer review across role boundaries. Develop on feature branches, run checks, request peer review and merge through a pull request.
 
 ## Assets and attribution
 
