@@ -76,6 +76,8 @@ import ee.ut.connect.data.repository.FirestoreChatRepository
 import com.google.firebase.auth.FirebaseAuth
 import java.io.ByteArrayOutputStream
 import java.io.File
+import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
 
 internal data class SelectedDocument(val name: String, val mimeType: String, val bytes: ByteArray)
 
@@ -141,9 +143,7 @@ fun ChatRoute(userId: String, displayName: String, onBack: () -> Unit) {
     }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
-            captured = pendingFile?.let {
-                BitmapFactory.decodeFile(it.absolutePath, BitmapFactory.Options().apply { inSampleSize = 2 })
-            }
+            captured = pendingFile?.let(::decodeCameraPhoto)
         } else {
             captured = null
             pendingFile?.delete()
@@ -243,6 +243,7 @@ fun ChatScreen(
     LaunchedEffect(lastMessageId) {
         if (lastMessageId != null) listState.animateScrollToItem(state.messages.lastIndex)
     }
+
     FantasyBackdrop(chat = true) {
         AdaptiveContent(modifier) { compact ->
             Column(Modifier.align(Alignment.TopCenter).widthIn(max = 960.dp).fillMaxSize().padding(if (compact) 4.dp else 16.dp)) {
@@ -361,4 +362,23 @@ fun ChatScreen(
             }
         }
     }
+}
+
+private fun decodeCameraPhoto(file: File): Bitmap? {
+    val bitmap = BitmapFactory.decodeFile(
+        file.absolutePath,
+        BitmapFactory.Options().apply { inSampleSize = 2 }
+    ) ?: return null
+
+    val rotation = runCatching {
+        ExifInterface(file).rotationDegrees
+    }.getOrDefault(0)
+
+    if (rotation == 0) return bitmap
+
+    return Bitmap.createBitmap(
+        bitmap, 0, 0, bitmap.width, bitmap.height,
+        Matrix().apply { postRotate(rotation.toFloat()) },
+        true
+    ).also { bitmap.recycle() }
 }
