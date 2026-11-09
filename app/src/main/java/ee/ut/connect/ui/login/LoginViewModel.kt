@@ -18,6 +18,7 @@ class LoginViewModel : ViewModel() {
     fun updateEmail(value: String) { email = value; error = null }
     fun updatePassword(value: String) { password = value; error = null }
     fun updateDisplayName(value: String) { displayName = value; error = null }
+    fun updateUsername(value: String) { username = value.lowercase().filter { it in 'a'..'z' || it in '0'..'9' || it == '_' }.take(20); error = null }
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
     var email by mutableStateOf("")
@@ -25,6 +26,8 @@ class LoginViewModel : ViewModel() {
     var password by mutableStateOf("")
         private set
     var displayName by mutableStateOf("")
+        private set
+    var username by mutableStateOf("")
         private set
     var busy by mutableStateOf(false)
         private set
@@ -35,6 +38,7 @@ class LoginViewModel : ViewModel() {
         if (busy || authenticated) return
         val address = email.trim()
         val name = displayName.trim()
+        val handle = username.trim().removePrefix("@").lowercase()
         if (address.isBlank() || password.isBlank()) {
             error = "Enter an email and password."
             return
@@ -43,8 +47,28 @@ class LoginViewModel : ViewModel() {
             error = "Enter a display name of 2 to 40 characters."
             return
         }
+        if (createAccount && (handle.length !in 3..20 || !handle.matches(Regex("[a-z0-9_]+")))) {
+            error = "Choose a username with 3–20 letters, numbers, or underscores."
+            return
+        }
         busy = true
         error = null
+        if (createAccount) {
+            firestore.collection("usernames").document(handle).get().addOnSuccessListener { reservation ->
+                if (!active) return@addOnSuccessListener
+                if (reservation.exists()) {
+                    busy = false
+                    error = "That username is already taken. Choose another one."
+                } else authenticate(address, name, handle, createAccount)
+            }.addOnFailureListener { exception ->
+                if (active) { busy = false; error = exception.localizedMessage ?: "Could not check username availability." }
+            }
+            return
+        }
+        authenticate(address, name, handle, createAccount)
+    }
+
+    private fun authenticate(address: String, name: String, handle: String, createAccount: Boolean) {
         val task = if (createAccount) auth.createUserWithEmailAndPassword(address, password)
         else auth.signInWithEmailAndPassword(address, password)
         task.addOnCompleteListener { result ->
@@ -64,10 +88,25 @@ class LoginViewModel : ViewModel() {
                     } else {
                         // Accounts made before profiles existed receive a private, neutral fallback name.
                         val profileName = if (createAccount) name else "User ${user.uid.take(6)}"
-                        profile.set(mapOf(
+                        val profileData = mutableMapOf<String, Any>(
                             "displayName" to profileName,
                             "createdAt" to FieldValue.serverTimestamp(),
-                        )).addOnSuccessListener profileSaved@ {
+                        )
+                        if (createAccount) {
+                            profileData["username"] = handle
+                            profileData["allowRequests"] = true
+                        }
+                        val saveTask = if (createAccount) {
+                            val usernameRef = firestore.collection("usernames").document(handle)
+                            firestore.runTransaction { transaction ->
+                                val reservation = transaction.get(usernameRef)
+                                require(!reservation.exists()) { "That username was just claimed. Sign in and choose another in Profile." }
+                                transaction.set(usernameRef, mapOf("uid" to user.uid))
+                                transaction.set(profile, profileData)
+                                null
+                            }
+                        } else profile.set(profileData)
+                        saveTask.addOnSuccessListener profileSaved@ {
                             if (!active) return@profileSaved
                             busy = false
                             password = ""

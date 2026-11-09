@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,13 +26,16 @@ import ee.ut.connect.R
 
 @Composable
 fun FantasyBackdrop(login: Boolean = false, chat: Boolean = false, content: @Composable BoxScope.() -> Unit) {
-    Box(Modifier.fillMaxSize()) {
-        Image(painterResource(if (login) R.drawable.infernal_gate else R.drawable.ember_hall),
-            contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-            if (login) listOf(Color.Black.copy(alpha = .12f), Color.Black.copy(alpha = .35f), Color.Black.copy(alpha = .85f))
-            else if (chat) listOf(Color.Black.copy(alpha = .92f), Color.Black.copy(alpha = .85f), Color.Black.copy(alpha = .78f))
-            else listOf(Color.Black.copy(alpha = .90f), Color.Black.copy(alpha = .80f), Color.Black.copy(alpha = .55f)))))
+    val style = LocalConnectThemeStyle.current
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        if (style == ConnectThemeStyle.DARK_FANTASY) {
+            Image(painterResource(if (login) R.drawable.infernal_gate else R.drawable.ember_hall),
+                contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                if (login) listOf(Color.Black.copy(alpha = .12f), Color.Black.copy(alpha = .35f), Color.Black.copy(alpha = .85f))
+                else if (chat) listOf(Color.Black.copy(alpha = .92f), Color.Black.copy(alpha = .85f), Color.Black.copy(alpha = .78f))
+                else listOf(Color.Black.copy(alpha = .90f), Color.Black.copy(alpha = .80f), Color.Black.copy(alpha = .55f)))))
+        }
         content()
     }
 }
@@ -50,11 +54,11 @@ fun InitialAvatar(name: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun fantasyFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = Color(0xF21D1C1A),
-    unfocusedContainerColor = Color(0xEB171716),
-    disabledContainerColor = Color(0xEB171716),
-    focusedBorderColor = Color(0xFFE9AF68),
-    unfocusedBorderColor = Color(0xFF806347),
+    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = .96f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = .88f),
+    disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = .88f),
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
 )
 
 @Composable

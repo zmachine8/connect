@@ -23,6 +23,9 @@ try {
     for (const id of ['alice', 'bob', 'charlie']) {
       await db.doc(`users/${id}`).set({ displayName: id, createdAt: new Date() });
     }
+    await db.doc('connections/alice_charlie').set({
+      participantIds: ['alice', 'charlie'], requestId: 'seeded-accepted-request', createdAt: new Date(),
+    });
     await chatDoc(db).set({ participantIds: ['alice', 'bob'], createdAt: new Date() });
     await messages(db).doc('first').set({ senderId: 'alice', type: 'text', text: 'Hello', createdAt: new Date() });
   });

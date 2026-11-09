@@ -7,17 +7,26 @@ Connect is a native Android course prototype for private one-to-one communicatio
 Implemented in the current source:
 
 - Firebase email/password registration, sign in, session-based start destination and sign out;
-- Firestore profiles and a live People directory excluding the current user;
-- editing your own display name;
+- Firestore profiles, connection requests and an exact username lookup;
+- connection requests, accepting or declining requests, and a user-controlled block list;
+- editing your display name and unique username, with a setting to close incoming connection requests;
+- group creation with existing connections and persistent group text chat;
 - deterministic private conversations and persistent text messages;
 - camera/gallery photo selection, preview and captions;
 - document sharing up to 200,000 bytes and one approximate location per share action;
-- dark fantasy Compose theme, licensed Cinzel/Lato fonts and adaptive launcher icon;
+- selectable Dark Fantasy, Light and Midnight themes, with the choice saved in Preferences DataStore;
+- licensed Cinzel/Lato fonts and adaptive launcher icon;
 - compact layouts based on available height, including keyboard insets;
 - screen ViewModels, saved chat/profile drafts and attachment cache references;
 - Android CI for unit tests, lint and debug builds, plus separate Firestore emulator rules tests.
 
-This is a prototype, not a finished release. Only the latest 30 messages are loaded; there is no pagination, push notification, search, groups, profile-photo upload or end-to-end encryption. See [integration and limitations](CONNECT-INTEGRATION.md).
+This is a prototype, not a finished release. Only the latest 30 direct messages are loaded; there is no pagination, push notification, profile-photo upload or end-to-end encryption. The invite action opens Android's share sheet with an install-and-connect message, but the app has no public distribution link yet. See [integration and limitations](CONNECT-INTEGRATION.md).
+
+## People, usernames, and groups
+
+The People screen opens on Connections, followed by Groups, Requests, and Blocked. The Find people search checks username prefixes across registered usernames, with existing connections sorted first. New accounts choose a username during registration; existing accounts can claim one in Profile. Groups can be created empty and the creator can add existing connections from the search results. Group chats have persistent text messages.
+
+Profile includes display name, username, a setting to close incoming connection requests, theme selection, and Firebase password-reset email. Sign-in also provides a “Forgot password?” action. The Firestore schema adds `/usernames/{lowercaseUsername}`, `/groups/{groupId}`, and `/groups/{groupId}/messages/{messageId}`. Publish the updated `firestore.rules` in Firebase Console before using username search, request privacy, or group chats. Group creators can add existing connections from search; group records cannot be edited or deleted from the client yet.
 
 ## Build and run
 
@@ -77,3 +86,10 @@ Roles rotate between stages. Members contribute through implementation, testing 
 ## Assets and attribution
 
 Cinzel and Lato font licence files are in `docs/font-licenses/`. The launcher icon was authored as Android vectors with AI assistance. The fantasy backgrounds were added during the design work; record their generation/source and applicable use rights before release. AI-assisted changes must be understood, reviewed and tested by the team.
+# People, usernames, and groups
+
+People discovery uses an exact username lookup. Users choose a unique username in Profile; search is case-insensitive and does not scan display names or the whole `/users` collection. Existing accounts must claim a username before other people can find them this way.
+
+The People screen opens on Connections, followed by Groups, Requests, and Blocked. A group can be created from existing connections and supports shared text chat. Profile includes display name, username, a setting to close incoming connection requests, theme selection, and Firebase password-reset email.
+
+The Firestore schema adds `/usernames/{lowercaseUsername}` reservations, `/groups/{groupId}`, and `/groups/{groupId}/messages/{messageId}`. After replacing `firestore.rules`, publish the rules in Firebase Console (or deploy them with the Firebase CLI) before testing these features. Group membership is selected from the creator's connections in the app; group records cannot be edited or deleted from the client yet.

@@ -4,4 +4,5 @@ data class ConnectUser(
     val id: String,
     val displayName: String,
     val isOnline: Boolean,
+    val username: String = "",
 )

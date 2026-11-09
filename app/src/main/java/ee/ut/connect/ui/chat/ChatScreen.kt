@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import ee.ut.connect.ui.theme.CopperDivider
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -52,6 +53,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -239,6 +242,7 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     var menuExpanded by remember { mutableStateOf(false) }
+    var enlargedImage by remember { mutableStateOf<Bitmap?>(null) }
     val lastMessageId = state.messages.lastOrNull()?.id
     LaunchedEffect(lastMessageId) {
         if (lastMessageId != null) listState.animateScrollToItem(state.messages.lastIndex)
@@ -303,13 +307,13 @@ fun ChatScreen(
                                     val bytes = message.imageBytes
                                     val bitmap = remember(message.id) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
                                     Column {
-                                        if (bitmap != null) Image(bitmap.asImageBitmap(), contentDescription = "Chat photo",
+                                        if (bitmap != null) Image(bitmap.asImageBitmap(), contentDescription = "Open photo full screen",
                                             contentScale = ContentScale.Fit,
                                             modifier = Modifier.widthIn(max = 240.dp).heightIn(max = 320.dp)
                                                 .size(
                                                     (240f * bitmap.width / maxOf(bitmap.width, bitmap.height)).dp,
                                                     (240f * bitmap.height / maxOf(bitmap.width, bitmap.height)).dp,
-                                                ))
+                                                ).clickable { enlargedImage = bitmap })
                                         else Text("Could not display photo", modifier = Modifier.padding(12.dp))
                                         if (message.text.isNotBlank()) Text(message.text, modifier = Modifier.padding(12.dp))
                                     }
@@ -332,7 +336,7 @@ fun ChatScreen(
                     IconButton(onClick = onCancelDocument, enabled = !state.uploading) { Text("×") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier.fillMaxWidth().background(Color(0xF2171614), CutCornerShape(8.dp)).padding(6.dp)) {
+                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = .98f), CutCornerShape(8.dp)).padding(6.dp)) {
                     Box {
                         IconButton(modifier = Modifier.semantics { contentDescription = "Add attachment" }, onClick = { menuExpanded = true }, enabled = !state.loading && !state.uploading) {
                             Text("+", style = MaterialTheme.typography.headlineMedium)
@@ -359,6 +363,26 @@ fun ChatScreen(
                         onSend()
                     }, modifier = Modifier.semantics { contentDescription = "Send message" }, enabled = !state.loading && !state.sending && !state.uploading && (state.draft.isNotBlank() || photoPreview != null || documentName != null)) { Text("➤") }
                 }
+            }
+        }
+    }
+    enlargedImage?.let { bitmap ->
+        Dialog(
+            onDismissRequest = { enlargedImage = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                Image(
+                    bitmap.asImageBitmap(),
+                    contentDescription = "Full-screen chat photo",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().clickable { enlargedImage = null },
+                )
+                IconButton(
+                    onClick = { enlargedImage = null },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)
+                        .semantics { contentDescription = "Close photo" },
+                ) { Text("×", color = Color.White, style = MaterialTheme.typography.headlineMedium) }
             }
         }
     }
