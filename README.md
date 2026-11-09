@@ -2,12 +2,14 @@
 
 Connect is a native Android course prototype for private one-to-one communication. The main flow is **sign in or create an account → People → Chat → send text or an attachment**.
 
-## Current state: Stage 2 / Design
+## Current state: Stage 3 / Build and integration
+
+The project timeline and learning across all course weeks and stages are summarized in [the course and project progress report](docs/course-progress-report.md).
 
 Implemented in the current source:
 
 - Firebase email/password registration, sign in, session-based start destination and sign out;
-- Firestore profiles, connection requests and an exact username lookup;
+- Firestore profiles, connection requests and username-prefix search across registered users, with existing connections sorted first;
 - connection requests, accepting or declining requests, and a user-controlled block list;
 - editing your display name and unique username, with a setting to close incoming connection requests;
 - group creation with existing connections and persistent group text chat;
@@ -24,9 +26,9 @@ This is a prototype, not a finished release. Only the latest 30 direct messages 
 
 ## People, usernames, and groups
 
-The People screen opens on Connections, followed by Groups, Requests, and Blocked. The Find people search checks username prefixes across registered usernames, with existing connections sorted first. New accounts choose a username during registration; existing accounts can claim one in Profile. Groups can be created empty and the creator can add existing connections from the search results. Group chats have persistent text messages.
+The People screen opens on Connections, followed by Groups, Requests, and Blocked. Find people searches registered usernames by prefix, with existing connections sorted before other results. New accounts choose a username during registration; existing accounts can claim one in Profile. Groups can be created before members are added, and members can be selected from search results. Group chats have persistent text messages.
 
-Profile includes display name, username, a setting to close incoming connection requests, theme selection, and Firebase password-reset email. Sign-in also provides a “Forgot password?” action. The Firestore schema adds `/usernames/{lowercaseUsername}`, `/groups/{groupId}`, and `/groups/{groupId}/messages/{messageId}`. Publish the updated `firestore.rules` in Firebase Console before using username search, request privacy, or group chats. Group creators can add existing connections from search; group records cannot be edited or deleted from the client yet.
+Profile includes display name, username, a setting to close incoming connection requests, theme selection, and Firebase password-reset email. The Firestore schema adds `/usernames/{lowercaseUsername}`, `/groups/{groupId}`, and `/groups/{groupId}/messages/{messageId}`. Publish the updated `firestore.rules` in Firebase Console before using usernames, request privacy, or group chats. Group membership is selected from the creator's connections in the app; group records cannot be edited or deleted from the client yet.
 
 ## Build and run
 
@@ -72,24 +74,37 @@ Compose renders observable state. Users and Chat use Firebase repositories. Logi
 
 Raigo Leesment, Mairon Mihkelsoo, Robin Murumets, Kermo Mätlik and Reimo Zukker.
 
-Stage 2 responsibilities:
+### Stage 3 responsibilities
 
 | Role | Member |
+|---|---|
+| Product Co-Leads | Raigo Leesment and Kermo Mätlik |
+| Design Lead | Reimo Zukker |
+| Development Lead | Mairon Mihkelsoo |
+| Quality Lead | Robin Murumets |
+
+Each member has one Stage 3 role, and nobody repeats their Stage 1 or Stage 2 role. After Stage 3, Reimo Zukker will be the Quality Lead for Stage 4. Other Stage 4 assignments have not yet been set. Members contribute across implementation, testing, and peer review. Develop on feature branches, run checks, request peer review, and merge through a pull request.
+
+### Previous stage roles
+
+**Stage 1**
+
+| Role | Member(s) |
+|---|---|
+| Product Lead | Reimo Zukker |
+| Design Lead | Raigo Leesment |
+| Quality Lead | Mairon Mihkelsoo |
+| Development Co-Leads | Robin Murumets and Kermo Mätlik |
+
+**Stage 2**
+
+| Role | Member(s) |
 |---|---|
 | Product Co-Leads | Mairon Mihkelsoo and Robin Murumets |
 | Design Lead | Kermo Mätlik |
 | Quality Lead | Raigo Leesment |
 | Development Lead | Reimo Zukker |
 
-Roles rotate between stages. Members contribute through implementation, testing and peer review across role boundaries. Develop on feature branches, run checks, request peer review and merge through a pull request.
-
 ## Assets and attribution
 
 Cinzel and Lato font licence files are in `docs/font-licenses/`. The launcher icon was authored as Android vectors with AI assistance. The fantasy backgrounds were added during the design work; record their generation/source and applicable use rights before release. AI-assisted changes must be understood, reviewed and tested by the team.
-# People, usernames, and groups
-
-People discovery uses an exact username lookup. Users choose a unique username in Profile; search is case-insensitive and does not scan display names or the whole `/users` collection. Existing accounts must claim a username before other people can find them this way.
-
-The People screen opens on Connections, followed by Groups, Requests, and Blocked. A group can be created from existing connections and supports shared text chat. Profile includes display name, username, a setting to close incoming connection requests, theme selection, and Firebase password-reset email.
-
-The Firestore schema adds `/usernames/{lowercaseUsername}` reservations, `/groups/{groupId}`, and `/groups/{groupId}/messages/{messageId}`. After replacing `firestore.rules`, publish the rules in Firebase Console (or deploy them with the Firebase CLI) before testing these features. Group membership is selected from the creator's connections in the app; group records cannot be edited or deleted from the client yet.
