@@ -7,7 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import ee.ut.connect.data.model.ConnectUser
 
-data class ContactRequest(val id: String, val senderId: String, val senderName: String)
+data class ContactRequest(val id: String, val senderId: String, val senderName: String, val isOnline: Boolean? = null)
 
 data class PeopleSnapshot(
     val myDisplayName: String,
@@ -43,7 +43,7 @@ class PeopleRepository(
                         .addOnSuccessListener { profile ->
                             val displayName = profile.getString("displayName")
                             if (profile.exists() && !displayName.isNullOrBlank()) {
-                                users += ConnectUser(profile.id, displayName, false, username)
+                            users += ConnectUser(profile.id, displayName, null, username)
                             }
                             remaining--
                             if (remaining == 0) onResult(Result.success(users))
@@ -89,7 +89,7 @@ class PeopleRepository(
                     .addOnSuccessListener { doc ->
                         val displayName = doc.getString("displayName")
                         if (doc.exists() && !displayName.isNullOrBlank()) results += ConnectUser(
-                            doc.id, displayName, false, doc.getString("username").orEmpty())
+                            doc.id, displayName, null, doc.getString("username").orEmpty())
                         remaining--
                         if (remaining == 0 && active) {
                             val ordered = results.sortedBy { it.displayName.lowercase() }

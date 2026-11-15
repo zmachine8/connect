@@ -13,6 +13,9 @@ Implemented in the current source:
 - connection requests, accepting or declining requests, and a user-controlled block list;
 - editing your display name and unique username, with a setting to close incoming connection requests;
 - group creation with existing connections and persistent group text chat;
+- live Online/Offline labels for people, requests and search results, using Firebase Realtime Database presence;
+- dot indicators for unread one-to-one and group conversations, cleared when the conversation is opened;
+- optional Firebase Cloud Messaging push notification function source (deployment requires Blaze);
 - deterministic private conversations and persistent text messages;
 - camera/gallery photo selection, preview and captions;
 - document sharing up to 200,000 bytes and one approximate location per share action;
@@ -22,11 +25,11 @@ Implemented in the current source:
 - screen ViewModels, saved chat/profile drafts and attachment cache references;
 - Android CI for unit tests, lint and debug builds, plus separate Firestore emulator rules tests.
 
-This is a prototype, not a finished release. Only the latest 30 direct messages are loaded; there is no pagination, push notification, profile-photo upload or end-to-end encryption. The invite action opens Android's share sheet with an install-and-connect message, but the app has no public distribution link yet. See [integration and limitations](CONNECT-INTEGRATION.md).
+This is a prototype, not a finished release. Only the latest 30 direct messages are loaded; there is no pagination, profile-photo upload or end-to-end encryption. In-app unread dots use Firestore listeners and do not require Cloud Functions, but they update only while Connect is running or when it next opens. Android push delivery requires deploying the optional Cloud Functions described in [message notifications setup](docs/message-notifications-setup.md), which requires Blaze. The invite action opens Android's share sheet with an install-and-connect message, but the app has no public distribution link yet. See [integration and limitations](CONNECT-INTEGRATION.md).
 
 ## People, usernames, and groups
 
-The People screen opens on Connections, followed by Groups, Requests, and Blocked. Find people searches registered usernames by prefix, with existing connections sorted before other results. New accounts choose a username during registration; existing accounts can claim one in Profile. Groups can be created before members are added, and members can be selected from search results. Group chats have persistent text messages.
+The People screen has Connections, Groups, and Access. Access contains Requests and Blocked tabs, with Requests selected by default. Dot indicators mark unread direct/group conversations and incoming requests. Find people searches registered usernames by prefix, with existing connections sorted before other results. New accounts choose a username during registration; existing accounts can claim one in Profile. Groups can be created before members are added, and members can be selected from search results. Group chats have persistent text messages.
 
 Profile includes display name, username, a setting to close incoming connection requests, theme selection, and Firebase password-reset email. The Firestore schema adds `/usernames/{lowercaseUsername}`, `/groups/{groupId}`, and `/groups/{groupId}/messages/{messageId}`. Publish the updated `firestore.rules` in Firebase Console before using usernames, request privacy, or group chats. Group membership is selected from the creator's connections in the app; group records cannot be edited or deleted from the client yet.
 
@@ -41,7 +44,9 @@ The CI uses JDK 17. JDK 21 is the locally tested command-line option; do not ass
 3. Check that `app/google-services.json` corresponds to the intended Firebase development project. This client configuration is present in the repository; do not replace it with service-account credentials.
 4. In that Firebase project, enable Email/Password authentication and create a Firestore database.
 5. Publish the repository's `firestore.rules` using Firebase Console → Firestore Database → Rules. Committing this file does not deploy it.
-6. Sync Gradle and run the `app` configuration.
+6. Set up Realtime Database presence as described in [presence setup](docs/presence-setup.md). This feature needs a Realtime Database instance and its rules; committing the rules file does not deploy it.
+7. Deploy Firestore rules for unread dots as described in [message notifications setup](docs/message-notifications-setup.md). Push notifications are optional and require the Firebase Blaze plan.
+8. Sync Gradle and run the `app` configuration.
 
 No Firebase Cloud Storage bucket is used. Photos and documents are capped and stored as Firestore blobs. This avoids requiring a Storage billing upgrade, but usage still depends on Firebase project quotas; it is not a guarantee of unlimited free service.
 

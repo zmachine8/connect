@@ -17,13 +17,33 @@ import ee.ut.connect.ui.theme.ConnectThemeStyle
 import ee.ut.connect.ui.theme.connectPreferences
 import ee.ut.connect.ui.ConnectApp
 import ee.ut.connect.ui.theme.ConnectTheme
+import ee.ut.connect.data.repository.PresenceManager
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
+import ee.ut.connect.data.repository.PushTokenRepository
+import ee.ut.connect.notification.ConnectMessagingService
 
 class MainActivity : ComponentActivity() {
+    private lateinit var presenceManager: PresenceManager
+    private var registeredUid: String? = null
+    private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
+        val uid = auth.currentUser?.uid
+        val previous = registeredUid
+        if (previous != null && previous != uid) {
+            FirebaseMessaging.getInstance().token.addOnSuccessListener { PushTokenRepository.remove(previous, it) }
+        }
+        registeredUid = uid
+        if (uid != null) FirebaseMessaging.getInstance().token.addOnSuccessListener { PushTokenRepository.save(uid, it) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ConnectMessagingService.createMessageChannel(this)
+        presenceManager = PresenceManager()
+        lifecycle.addObserver(presenceManager)
         @Suppress("DEPRECATION")
         window.statusBarColor = Color.rgb(17, 17, 16)
         @Suppress("DEPRECATION")
@@ -62,5 +82,20 @@ class MainActivity : ComponentActivity() {
                 })
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        FirebaseAuth.getInstance().addAuthStateListener(authStateListener)
+    }
+
+    override fun onStop() {
+        FirebaseAuth.getInstance().removeAuthStateListener(authStateListener)
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        presenceManager.close()
+        super.onDestroy()
     }
 }

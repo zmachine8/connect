@@ -2,16 +2,27 @@ package ee.ut.connect.ui.users
 
 import android.content.Intent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -26,7 +37,8 @@ import ee.ut.connect.ui.theme.CopperDivider
 import ee.ut.connect.ui.theme.FantasyBackdrop
 import ee.ut.connect.ui.theme.InitialAvatar
 
-private enum class PeopleSection(val title: String) { CONNECTIONS("Connections"), GROUPS("Groups"), REQUESTS("Requests"), BLOCKED("Blocked") }
+private enum class PeopleSection(val title: String) { CONNECTIONS("Connections"), GROUPS("Groups"), ACCESS("Access") }
+private enum class AccessSection(val title: String) { REQUESTS("Requests"), BLOCKED("Blocked") }
 
 @Composable
 fun UsersRoute(
@@ -76,8 +88,10 @@ fun UsersScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val currentUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
     var section by remember { mutableStateOf(PeopleSection.CONNECTIONS) }
+    var accessSection by remember { mutableStateOf(AccessSection.REQUESTS) }
     var query by remember { mutableStateOf("") }
     var createDialog by remember { mutableStateOf(false) }
     LaunchedEffect(statusMessage) {
@@ -85,17 +99,24 @@ fun UsersScreen(
     }
     FantasyBackdrop {
         AdaptiveContent(modifier) { compact ->
-            Column(Modifier.align(Alignment.TopCenter).widthIn(max = 840.dp).fillMaxSize().padding(if (compact) 8.dp else 20.dp)) {
+            Column(Modifier.align(Alignment.TopCenter).widthIn(max = 840.dp).fillMaxSize()
+                .padding(if (compact) 8.dp else 20.dp)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null,
+                    onClick = { focusManager.clearFocus() },
+                )) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("People", style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
-                    TextButton(onClick = onOpenProfile) { Text("Profile") }
-                    TextButton(onClick = onSignOut) { Text("Sign out") }
+                    TextButton(onClick = { focusManager.clearFocus(); onOpenProfile() }) { Text("Profile") }
+                    TextButton(onClick = { focusManager.clearFocus(); onSignOut() }) { Text("Sign out") }
                 }
                 CopperDivider(Modifier.padding(top = if (compact) 0.dp else 8.dp, bottom = if (compact) 4.dp else 12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("Find people", style = MaterialTheme.typography.titleMedium)
                     TextButton(onClick = {
+                        focusManager.clearFocus()
                         val displayName = (state as? UsersUiState.Success)?.people?.myDisplayName ?: "Connect user"
                         val intent = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT,
                             "Join me on Connect. Install Connect, create an account, and search for my username in the People screen.") }
@@ -104,12 +125,40 @@ fun UsersScreen(
                 }
                 OutlinedTextField(value = query, onValueChange = { query = it; if (it.isBlank()) onClearSearch() else onSearch(it) },
                     label = { Text("Search by username") }, placeholder = { Text("Search all users by username") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                val navPeople = (state as? UsersUiState.Success)?.people
+                val connectionUnread = navPeople?.users.orEmpty().filter { it.id in navPeople?.connectionIds.orEmpty() }.sumOf { it.unreadCount }
+                val groupUnread = groups.sumOf { it.unreadCount }
+                val requestCount = navPeople?.incomingRequests?.size ?: 0
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
                     PeopleSection.entries.forEach { item ->
-                        TextButton(onClick = { section = item; query = ""; onClearSearch() }) {
-                            Text(if (section == item) "• ${item.title}" else item.title,
-                                color = if (section == item) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                        val count = when (item) {
+                            PeopleSection.CONNECTIONS -> connectionUnread
+                            PeopleSection.GROUPS -> groupUnread
+                            PeopleSection.ACCESS -> requestCount
+                        }
+                        TextButton(onClick = { focusManager.clearFocus(); section = item; query = ""; onClearSearch() }, modifier = Modifier.weight(1f)) {
+                            Text(item.title,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (section == item) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (section == item) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1, softWrap = false)
+                            if (count > 0) { Spacer(Modifier.width(4.dp)); UnreadBadge(count) }
+                        }
+                    }
+                }
+                if (section == PeopleSection.ACCESS && query.isBlank()) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        AccessSection.entries.forEachIndexed { index, item ->
+                            if (index > 0) Text("|", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { accessSection = item }) {
+                                Text(item.title,
+                                    fontWeight = if (accessSection == item) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (accessSection == item) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1, softWrap = false)
+                            }
                         }
                     }
                 }
@@ -146,30 +195,45 @@ fun UsersScreen(
                                             onUserSelected, onSendRequest, onBlock, { group -> onAddToGroup(group, user) })
                                     }
                                 }
-                            PeopleSection.GROUPS -> Column(Modifier.weight(1f).fillMaxWidth()) {
-                                Button(onClick = { createDialog = true }) { Text("Create group") }
-                                if (groups.isEmpty()) EmptyText("You are not in any groups yet.")
-                                else LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(groups, key = { it.id }) { group ->
-                                        Surface(onClick = { onGroupSelected(group) }, shape = CutCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.surface.copy(alpha = .96f),
-                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f))) {
-                                            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                Text(group.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                                                Text("${group.memberIds.size} members", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            PeopleSection.GROUPS -> Box(Modifier.weight(1f).fillMaxWidth()) {
+                                if (groups.isEmpty()) {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        EmptyText("You are not in any groups yet.")
+                                    }
+                                } else {
+                                    LazyColumn(
+                                        Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(bottom = 88.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        items(groups, key = { it.id }) { group ->
+                                            Surface(onClick = { onGroupSelected(group) }, shape = CutCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surface.copy(alpha = .96f),
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f))) {
+                                                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(group.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                                                    if (group.unreadCount > 0) UnreadBadge(group.unreadCount)
+                                                    Text("${group.memberIds.size} members", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                Button(
+                                    onClick = { createDialog = true },
+                                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                                ) { Text("Create group") }
                             }
-                            PeopleSection.REQUESTS -> if (people.incomingRequests.isEmpty()) EmptyText("No pending connection requests")
+                            PeopleSection.ACCESS -> when (accessSection) {
+                                AccessSection.REQUESTS -> if (people.incomingRequests.isEmpty()) EmptyText("No pending connection requests")
                                 else LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     items(people.incomingRequests, key = { it.id }) { RequestRow(it, onRespond) }
                                 }
-                            PeopleSection.BLOCKED -> if (people.blockedUsers.isEmpty()) EmptyText("No blocked people")
+                                AccessSection.BLOCKED -> if (people.blockedUsers.isEmpty()) EmptyText("No blocked people")
                                 else LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     items(people.blockedUsers, key = { it.id }) { user -> UserRow(user, false, false, true, onUserSelected, onSendRequest, onBlock, onUnblock) }
                                 }
+                            }
                         }
                         if (createDialog) CreateGroupDialog(onDismiss = { createDialog = false }, onCreate = { name ->
                             createDialog = false; onCreateGroup(name)
@@ -190,7 +254,11 @@ private fun UserRow(user: ConnectUser, connected: Boolean, pending: Boolean, blo
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             InitialAvatar(user.displayName, Modifier.size(42.dp))
             Column(Modifier.weight(1f)) {
-                Text(user.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(user.displayName, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    PresenceLabel(user.isOnline)
+                    if (user.unreadCount > 0) UnreadBadge(user.unreadCount)
+                }
                 if (user.username.isNotBlank()) Text("@${user.username}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             when { blocked -> TextButton(onClick = { onUnblock(user.id) }) { Text("Unblock") }
@@ -220,7 +288,11 @@ private fun SearchUserRow(
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             InitialAvatar(user.displayName, Modifier.size(42.dp))
             Column(Modifier.weight(1f)) {
-                Text(user.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(user.displayName, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    PresenceLabel(user.isOnline)
+                    if (user.unreadCount > 0) UnreadBadge(user.unreadCount)
+                }
                 if (user.username.isNotBlank()) Text("@${user.username}", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -253,6 +325,29 @@ private fun SearchUserRow(
     )
 }
 
+@Composable
+private fun PresenceLabel(isOnline: Boolean?) {
+    Text(
+        text = when (isOnline) { true -> "Online"; false -> "Offline"; null -> "Unavailable" },
+        style = MaterialTheme.typography.labelSmall,
+        color = when (isOnline) {
+            true -> Color(0xFF83D18A)
+            false -> Color(0xFFE88A82)
+            null -> MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        maxLines = 1,
+    )
+}
+
+@Composable
+private fun UnreadBadge(count: Int) {
+    if (count > 0) {
+        Box(Modifier.padding(horizontal = 3.dp).size(8.dp)
+            .background(MaterialTheme.colorScheme.primary, CircleShape)
+            .semantics { contentDescription = "Unread" })
+    }
+}
+
 @Composable private fun EmptyText(text: String) = Box(Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) { Text(text) }
 
 @Composable
@@ -261,7 +356,12 @@ private fun RequestRow(request: ContactRequest, onRespond: (ContactRequest, Bool
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .6f))) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             InitialAvatar(request.senderName, Modifier.size(44.dp))
-            Text(request.senderName, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(request.senderName, modifier = Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    PresenceLabel(request.isOnline)
+                }
+            }
             Button(onClick = { onRespond(request, true) }) { Text("Accept") }
             TextButton(onClick = { onRespond(request, false) }) { Text("Decline") }
         }

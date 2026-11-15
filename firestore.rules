@@ -29,6 +29,32 @@ service cloud.firestore {
         && request.resource.data.allowRequests is bool
         && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == userId;
       allow delete: if false;
+
+      match /fcmTokens/{tokenId} {
+        allow read, list: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['token', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 0
+          && request.resource.data.token.size() <= 4096
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /unreadChats/{conversationKey} {
+        allow read, list: if request.auth != null && request.auth.uid == userId;
+        // Clients can clear a badge when they open a conversation. Only the trusted
+        // Cloud Function (Admin SDK) can increment the unread count.
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['count', 'type', 'conversationId', 'readAt'])
+          && request.resource.data.count == 0
+          && request.resource.data.type in ['direct', 'group']
+          && request.resource.data.conversationId is string
+          && request.resource.data.readAt == request.time;
+        allow delete: if false;
+      }
     }
 
     match /usernames/{username} {
@@ -96,7 +122,11 @@ service cloud.firestore {
 
     match /contactRequests/{requestId} {
       allow get: if request.auth != null
-        && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.recipientId);
+        && (
+          (resource == null && requestId.matches('^' + request.auth.uid + '_.+$'))
+          || (resource != null
+            && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.recipientId))
+        );
       allow list: if request.auth != null && request.auth.uid == resource.data.senderId;
       allow list: if request.auth != null && request.auth.uid == resource.data.recipientId;
       allow create: if request.auth != null
@@ -105,6 +135,7 @@ service cloud.firestore {
         && request.resource.data.senderId == request.auth.uid
         && request.resource.data.recipientId is string
         && request.resource.data.recipientId != request.auth.uid
+        && requestId == request.resource.data.senderId + '_' + request.resource.data.recipientId
         && request.resource.data.senderName is string
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time

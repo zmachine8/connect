@@ -3,6 +3,7 @@ package ee.ut.connect.data.model
 data class ConnectUser(
     val id: String,
     val displayName: String,
-    val isOnline: Boolean,
+    val isOnline: Boolean?,
     val username: String = "",
+    val unreadCount: Int = 0,
 )

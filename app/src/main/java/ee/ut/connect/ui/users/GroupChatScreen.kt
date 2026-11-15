@@ -23,7 +23,7 @@ fun GroupChatRoute(groupId: String, groupName: String, onBack: () -> Unit) {
     val uid = FirebaseAuth.getInstance().currentUser?.uid
     DisposableEffect(groupId) {
         val listener = repository.observeMessages(groupId) { result ->
-            result.onSuccess { messages = it; error = null }.onFailure { error = it.localizedMessage }
+            result.onSuccess { messages = it; error = null; repository.markRead(groupId) }.onFailure { error = it.localizedMessage }
         }
         onDispose { listener.remove() }
     }

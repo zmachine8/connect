@@ -5,13 +5,15 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
-data class ConnectGroup(val id: String, val name: String, val memberIds: List<String>, val createdBy: String)
+data class ConnectGroup(val id: String, val name: String, val memberIds: List<String>, val createdBy: String, val unreadCount: Int = 0)
 data class GroupMessage(val id: String, val senderId: String, val senderName: String, val text: String, val createdAt: Long)
 
 class GroupRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
 ) {
+    private val unreadRepository = UnreadRepository(auth, firestore)
+
     fun observeGroups(onResult: (Result<List<ConnectGroup>>) -> Unit): ListenerRegistration {
         val uid = auth.currentUser?.uid ?: return EmptyGroupListener.also {
             onResult(Result.failure(IllegalStateException("Sign in to see groups")))
@@ -55,6 +57,8 @@ class GroupRepository(
                     GroupMessage(doc.id, sender, doc.getString("senderName") ?: "Member", text, doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L)
                 }))
             }
+
+    fun markRead(groupId: String) = unreadRepository.markGroupRead(groupId)
 
     fun sendMessage(groupId: String, text: String, callback: (Result<Unit>) -> Unit) {
         val uid = auth.currentUser?.uid ?: return callback(Result.failure(IllegalStateException("Sign in first")))
