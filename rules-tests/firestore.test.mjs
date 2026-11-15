@@ -21,7 +21,13 @@ try {
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     for (const id of ['alice', 'bob', 'charlie']) {
-      await db.doc(`users/${id}`).set({ displayName: id, createdAt: new Date() });
+      await db.doc(`users/${id}`).set({
+        displayName: id,
+        createdAt: new Date(),
+        username: id,
+        allowRequests: true,
+      });
+      await db.doc(`usernames/${id}`).set({ uid: id });
     }
     await db.doc('connections/alice_charlie').set({
       participantIds: ['alice', 'charlie'], requestId: 'seeded-accepted-request', createdAt: new Date(),
