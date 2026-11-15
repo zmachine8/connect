@@ -22,7 +22,8 @@ The tests run against the demo-connect emulator project. They cover access restr
 
 ## Manual checks
 
-- Register, sign in and sign out; return from Create account to Sign in.
+- Register with an unused username; confirm a username already owned by another account is rejected; sign in and sign out; return from Create account to Sign in.
+- After signing out, sign in as a second account and confirm the first account's profile, people data and conversations are no longer visible.
 - Edit a display name and verify another account sees the update.
 - Use two accounts to send and receive text, photos, captions, documents and location.
 - Reject empty text and oversized documents; cancel or remove attachment selections.

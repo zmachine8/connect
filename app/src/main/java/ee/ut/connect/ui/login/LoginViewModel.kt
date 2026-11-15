@@ -53,18 +53,6 @@ class LoginViewModel : ViewModel() {
         }
         busy = true
         error = null
-        if (createAccount) {
-            firestore.collection("usernames").document(handle).get().addOnSuccessListener { reservation ->
-                if (!active) return@addOnSuccessListener
-                if (reservation.exists()) {
-                    busy = false
-                    error = "That username is already taken. Choose another one."
-                } else authenticate(address, name, handle, createAccount)
-            }.addOnFailureListener { exception ->
-                if (active) { busy = false; error = exception.localizedMessage ?: "Could not check username availability." }
-            }
-            return
-        }
         authenticate(address, name, handle, createAccount)
     }
 
