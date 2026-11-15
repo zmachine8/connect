@@ -23,20 +23,14 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
-import ee.ut.connect.data.repository.PushTokenRepository
 import ee.ut.connect.notification.ConnectMessagingService
 
 class MainActivity : ComponentActivity() {
     private lateinit var presenceManager: PresenceManager
-    private var registeredUid: String? = null
     private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
-        val uid = auth.currentUser?.uid
-        val previous = registeredUid
-        if (previous != null && previous != uid) {
-            FirebaseMessaging.getInstance().token.addOnSuccessListener { PushTokenRepository.remove(previous, it) }
+        if (auth.currentUser != null) {
+            FirebaseMessaging.getInstance().register()
         }
-        registeredUid = uid
-        if (uid != null) FirebaseMessaging.getInstance().token.addOnSuccessListener { PushTokenRepository.save(uid, it) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

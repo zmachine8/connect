@@ -81,6 +81,7 @@ fun ProfileRoute(onBack: () -> Unit, onThemeChange: (ConnectThemeStyle) -> Unit 
                 }
                 EmberButton(onClick = viewModel::save, enabled = !viewModel.busy && !viewModel.loading) { Text("Save profile and privacy") }
                 Text("Account", style = MaterialTheme.typography.titleMedium)
+                Text("Email: ${viewModel.email}", style = MaterialTheme.typography.bodyMedium)
                 OutlinedButton(onClick = viewModel::sendPasswordReset, enabled = !viewModel.busy) {
                     Text("Send password reset email")
                 }

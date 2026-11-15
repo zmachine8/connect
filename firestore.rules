@@ -24,10 +24,15 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() >= 2
         && request.resource.data.displayName.size() <= 40
-        && request.resource.data.username is string
-        && request.resource.data.username.matches('^[a-z0-9_]{3,20}$')
-        && request.resource.data.allowRequests is bool
-        && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == userId;
+        && (
+          (!('username' in resource.data)
+            && !('username' in request.resource.data)
+            && (!('allowRequests' in request.resource.data) || request.resource.data.allowRequests is bool))
+          || (request.resource.data.username is string
+            && request.resource.data.username.matches('^[a-z0-9_]{3,20}$')
+            && request.resource.data.allowRequests is bool
+            && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == userId)
+        );
       allow delete: if false;
 
       match /fcmTokens/{tokenId} {
@@ -38,6 +43,18 @@ service cloud.firestore {
           && request.resource.data.token is string
           && request.resource.data.token.size() > 0
           && request.resource.data.token.size() <= 4096
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /fcmInstallations/{installationIdHash} {
+        allow read, list: if request.auth != null && request.auth.uid == userId;
+        allow create, update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['installationId', 'updatedAt'])
+          && request.resource.data.installationId is string
+          && request.resource.data.installationId.size() > 0
+          && request.resource.data.installationId.size() <= 256
           && request.resource.data.updatedAt == request.time;
         allow delete: if request.auth != null && request.auth.uid == userId;
       }
@@ -196,10 +213,6 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      function participants() { return resource.data.participantIds; }
-      function isParticipant() {
-        return request.auth != null && request.auth.uid in participants();
-      }
       function noParticipantBlocks() {
         return !exists(/databases/$(database)/documents/blocks/$(resource.data.participantIds[0] + '_' + resource.data.participantIds[1]))
           && !exists(/databases/$(database)/documents/blocks/$(resource.data.participantIds[1] + '_' + resource.data.participantIds[0]));

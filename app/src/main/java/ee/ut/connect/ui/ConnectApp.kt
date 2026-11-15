@@ -12,6 +12,7 @@ import ee.ut.connect.ui.profile.ProfileRoute
 import ee.ut.connect.ui.users.UsersRoute
 import ee.ut.connect.ui.users.GroupChatRoute
 import ee.ut.connect.data.repository.ConnectGroup
+import ee.ut.connect.data.repository.PushInstallationRepository
 import ee.ut.connect.ui.theme.ConnectThemeStyle
 import kotlinx.serialization.Serializable
 
@@ -38,10 +39,15 @@ fun ConnectApp(onThemeChange: (ConnectThemeStyle) -> Unit = {}) {
             UsersRoute(
                 onOpenProfile = { navController.navigate(ProfileDestination) },
                 onSignOut = {
-                    auth.signOut()
-                    navController.navigate(LoginDestination) {
-                        popUpTo(UsersDestination) { inclusive = true }
+                    val finishSignOut = {
+                        auth.signOut()
+                        navController.navigate(LoginDestination) {
+                            popUpTo(UsersDestination) { inclusive = true }
+                        }
                     }
+                    val uid = auth.currentUser?.uid
+                    if (uid == null) finishSignOut()
+                    else PushInstallationRepository.removeCurrentInstallation(uid, finishSignOut)
                 },
                 onUserSelected = { user ->
                     navController.navigate(

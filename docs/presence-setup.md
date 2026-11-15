@@ -17,6 +17,8 @@ The rules let signed-in users read status and allow each account to write only i
 
 The app marks its signed-in account online while the app is in the foreground. It marks the account offline when the app goes to the background or signs out. Firebase Realtime Database's disconnect operation also marks an app instance offline after a connection loss or crash. Each app instance writes to its own connection entry, so an account remains online if another device is still active.
 
+To handle a missed or delayed disconnect cleanup, an active app refreshes its presence timestamp every 30 seconds. Readers treat an `online` entry whose timestamp is older than 90 seconds as offline, and recheck that age every 30 seconds. After a force-stop or abrupt network loss, the UI may therefore take up to about 90 seconds to change to Offline if Firebase does not process the disconnect immediately. A normal background transition writes Offline directly.
+
 If you replace `app/google-services.json`, make sure the `firebase_url` and deployed database rules belong to the same Firebase project as the existing Firestore configuration.
 
 ## Manual checks
@@ -25,5 +27,6 @@ If you replace `app/google-services.json`, make sure the `firebase_url` and depl
 2. With both apps open, confirm each account is shown as **Online** on the other device.
 3. Put one app in the background and confirm that account changes to **Offline**; bring it back to the foreground and confirm it becomes **Online** again.
 4. Turn off Wi-Fi on one device and confirm its status changes to **Offline** after the database detects disconnection; restore Wi-Fi and confirm it returns to **Online**.
-5. Sign out on one device and check that the status is **Offline**.
-6. Sign in to the same account on two devices. Background one device and verify the account remains **Online** while the other stays in the foreground.
+5. Force-stop Connect or terminate its process while the device is online. Confirm it is no longer shown as **Online** after the 90-second stale-presence timeout, even if disconnect cleanup is delayed.
+6. Sign out on one device and check that the status is **Offline**.
+7. Sign in to the same account on two devices. Background one device and verify the account remains **Online** while the other stays in the foreground.

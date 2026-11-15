@@ -61,22 +61,22 @@ async function processNewMessage(event, { conversationType, conversationId, titl
   const senderName = sender.get("displayName") || "Connect user";
   const body = preview(message);
   const title = titleFor(senderName, conversation.data());
-  const tokenSnapshots = await Promise.all(recipients.map((uid) => db.collection("users").doc(uid)
-    .collection("fcmTokens").get()));
-  const tokenEntries = tokenSnapshots.flatMap((snapshot) => snapshot.docs.map((doc) => ({
+  const installationSnapshots = await Promise.all(recipients.map((uid) => db.collection("users").doc(uid)
+    .collection("fcmInstallations").get()));
+  const installationEntries = installationSnapshots.flatMap((snapshot) => snapshot.docs.map((doc) => ({
     ref: doc.ref,
-    token: doc.get("token"),
-  }))).filter((entry) => typeof entry.token === "string" && entry.token.length > 0);
-  if (!tokenEntries.length) {
+    fid: doc.get("installationId"),
+  }))).filter((entry) => typeof entry.fid === "string" && entry.fid.length > 0);
+  if (!installationEntries.length) {
     await messageRef.update({ connectPushSent: true });
     return;
   }
 
-  for (let start = 0; start < tokenEntries.length; start += 500) {
-    const batch = tokenEntries.slice(start, start + 500);
+  for (let start = 0; start < installationEntries.length; start += 500) {
+    const batch = installationEntries.slice(start, start + 500);
     try {
       const response = await getMessaging().sendEachForMulticast({
-        tokens: batch.map((entry) => entry.token),
+        fids: batch.map((entry) => entry.fid),
         notification: { title, body },
         data: { type: conversationType, conversationId, senderId: message.senderId },
         android: { notification: { channelId: "connect_messages" } },
@@ -84,7 +84,7 @@ async function processNewMessage(event, { conversationType, conversationId, titl
       const stale = [];
       response.responses.forEach((result, index) => {
         const code = result.error?.code || "";
-        if (code.includes("registration-token-not-registered") || code.includes("invalid-registration-token")) {
+        if (code.includes("installation-id-not-registered")) {
           stale.push(batch[index].ref.delete());
         }
       });

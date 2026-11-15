@@ -14,7 +14,13 @@ This Firestore rules deployment works on the Spark free plan. The first time thi
 
 ## Optional Android push notifications
 
-The `functions/` directory contains optional Cloud Functions that increment unread counts and send FCM notifications for direct and group messages. Firebase requires the project to use the **Blaze** plan with a linked billing account to deploy these functions. If remaining on Spark, skip the following deployment; the in-app dots continue to work.
+The `functions/` directory contains optional Cloud Functions that increment unread counts and send FCM notifications for direct and group messages. The Android client registers a Firebase Installation ID (FID), and the function targets those FIDs. Firebase requires the project to use the **Blaze** plan with a linked billing account to deploy these functions. If remaining on Spark, skip the following deployment; the in-app dots continue to work.
+
+The app stores its FID under the signed-in user's `fcmInstallations` subcollection. Deploy the updated Firestore rules before installing this version so that this write is allowed; Firestore rules deployment remains available on Spark:
+
+```bash
+npx --yes firebase-tools deploy --only firestore:rules --project connect-f1a30
+```
 
 To enable push later, use Node.js 22 and deploy from the repository root:
 

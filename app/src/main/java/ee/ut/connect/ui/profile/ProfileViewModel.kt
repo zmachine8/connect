@@ -9,11 +9,14 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 class ProfileViewModel(private val savedState: SavedStateHandle) : ViewModel() {
-    private val uid = FirebaseAuth.getInstance().currentUser?.uid
+    private val currentUser = FirebaseAuth.getInstance().currentUser
+    private val uid = currentUser?.uid
+    val email: String = currentUser?.email.orEmpty()
     private val firestore = FirebaseFirestore.getInstance()
     private var active = true
     private var dirty = savedState.get<Boolean>("dirty") ?: false
     private var usernameDirty = false
+    private var profileHasUsername = false
     private var requestsDirty = false
     var name by mutableStateOf(savedState.get<String>("name") ?: "")
         private set
@@ -34,7 +37,10 @@ class ProfileViewModel(private val savedState: SavedStateHandle) : ViewModel() {
                 if (error != null) message = error.localizedMessage ?: "Could not load profile"
                 else if (snapshot != null && !dirty && !busy) {
                     name = snapshot.getString("displayName").orEmpty()
-                    if (!usernameDirty) username = snapshot.getString("username").orEmpty()
+                    if (!usernameDirty) {
+                        username = snapshot.getString("username").orEmpty()
+                        profileHasUsername = username.isNotBlank()
+                    }
                     if (!requestsDirty) allowRequests = snapshot.getBoolean("allowRequests") != false
                     savedState["name"] = name
                 }
@@ -62,7 +68,8 @@ class ProfileViewModel(private val savedState: SavedStateHandle) : ViewModel() {
             message = "Use a display name of 2 to 40 characters."
             return
         }
-        if (handle.length !in 3..20 || !handle.matches(Regex("[a-z0-9_]+"))) {
+        if ((handle.isBlank() && profileHasUsername) || (handle.isNotBlank() &&
+            (handle.length !in 3..20 || !handle.matches(Regex("[a-z0-9_]+"))))) {
             message = "Username must be 3–20 characters: letters, numbers, or underscore."
             return
         }
@@ -72,18 +79,26 @@ class ProfileViewModel(private val savedState: SavedStateHandle) : ViewModel() {
         firestore.runTransaction { transaction ->
             val profile = transaction.get(profileRef)
             val oldHandle = profile.getString("username")?.lowercase()
-            val newHandleRef = firestore.collection("usernames").document(handle)
-            val currentReservation = transaction.get(newHandleRef)
-            require(!currentReservation.exists() || currentReservation.getString("uid") == id) { "That username is already taken." }
-            if (oldHandle != handle || !currentReservation.exists()) {
-                transaction.set(newHandleRef, mapOf("uid" to id))
-                if (oldHandle != handle) oldHandle?.let { transaction.delete(firestore.collection("usernames").document(it)) }
+            if (handle.isBlank()) {
+                require(oldHandle.isNullOrBlank()) { "Username must be 3–20 characters: letters, numbers, or underscore." }
+                transaction.update(profileRef, mapOf(
+                    "displayName" to trimmed,
+                    "allowRequests" to allowRequests,
+                ))
+            } else {
+                val newHandleRef = firestore.collection("usernames").document(handle)
+                val currentReservation = transaction.get(newHandleRef)
+                require(!currentReservation.exists() || currentReservation.getString("uid") == id) { "That username is already taken." }
+                if (oldHandle != handle || !currentReservation.exists()) {
+                    transaction.set(newHandleRef, mapOf("uid" to id))
+                    if (oldHandle != handle) oldHandle?.let { transaction.delete(firestore.collection("usernames").document(it)) }
+                }
+                transaction.update(profileRef, mapOf(
+                    "displayName" to trimmed,
+                    "username" to handle,
+                    "allowRequests" to allowRequests,
+                ))
             }
-            transaction.update(profileRef, mapOf(
-                "displayName" to trimmed,
-                "username" to handle,
-                "allowRequests" to allowRequests,
-            ))
             null
         }
             .addOnSuccessListener {
@@ -91,6 +106,7 @@ class ProfileViewModel(private val savedState: SavedStateHandle) : ViewModel() {
                     busy = false
                     name = trimmed
                     username = handle
+                    profileHasUsername = handle.isNotBlank()
                     usernameDirty = false
                     requestsDirty = false
                     dirty = false

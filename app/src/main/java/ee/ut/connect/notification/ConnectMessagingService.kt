@@ -13,11 +13,13 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import ee.ut.connect.MainActivity
 import ee.ut.connect.R
-import ee.ut.connect.data.repository.PushTokenRepository
+import ee.ut.connect.data.repository.PushInstallationRepository
 
 class ConnectMessagingService : FirebaseMessagingService() {
-    override fun onNewToken(token: String) {
-        FirebaseAuth.getInstance().currentUser?.uid?.let { PushTokenRepository.save(it, token) }
+    override fun onRegistered(installationId: String) {
+        FirebaseAuth.getInstance().currentUser?.uid?.let {
+            PushInstallationRepository.save(it, installationId)
+        }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

@@ -103,7 +103,15 @@ class LoginViewModel : ViewModel() {
                             if (!active) return@addOnFailureListener
                             auth.signOut()
                             busy = false
-                            error = exception.localizedMessage ?: "Could not save your profile. Try signing in again."
+                            password = ""
+                            if (createAccount && exception.hasUsernameTakenMessage()) {
+                                creatingAccount = false
+                                displayName = ""
+                                username = ""
+                                error = "That username is already taken. Your account was created. Sign in with this email, then choose a different username in Profile."
+                            } else {
+                                error = exception.localizedMessage ?: "Could not save your profile. Try signing in again."
+                            }
                         }
                     }
                 }.addOnFailureListener { exception ->
@@ -120,5 +128,18 @@ class LoginViewModel : ViewModel() {
         active = false
         password = ""
         super.onCleared()
+    }
+
+    private fun Throwable.hasUsernameTakenMessage(): Boolean {
+        var current: Throwable? = this
+        while (current != null) {
+            if (current.message?.contains(USERNAME_TAKEN_MARKER) == true) return true
+            current = current.cause
+        }
+        return false
+    }
+
+    private companion object {
+        const val USERNAME_TAKEN_MARKER = "That username was just claimed"
     }
 }
