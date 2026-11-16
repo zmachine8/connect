@@ -1,5 +1,6 @@
 {
   "project_info": {
+    "firebase_url": "https://connect-f1a30-default-rtdb.europe-west1.firebasedatabase.app",
     "project_number": "261685614615",
     "project_id": "connect-f1a30",
     "storage_bucket": "connect-f1a30.firebasestorage.app"

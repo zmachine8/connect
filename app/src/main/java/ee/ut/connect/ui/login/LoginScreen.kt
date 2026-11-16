@@ -48,11 +48,13 @@ fun LoginRoute(onAuthenticated: () -> Unit) {
         email = viewModel.email,
         password = viewModel.password,
         displayName = viewModel.displayName,
+        username = viewModel.username,
         busy = viewModel.busy,
         error = viewModel.error,
         onEmailChanged = viewModel::updateEmail,
         onPasswordChanged = viewModel::updatePassword,
         onDisplayNameChanged = viewModel::updateDisplayName,
+        onUsernameChanged = viewModel::updateUsername,
         onSignIn = { viewModel.submit(false) },
         onCreateAccount = { viewModel.submit(true) },
     )
@@ -65,11 +67,13 @@ fun LoginScreen(
     email: String,
     password: String,
     displayName: String,
+    username: String,
     busy: Boolean,
     error: String?,
     onEmailChanged: (String) -> Unit,
     onPasswordChanged: (String) -> Unit,
     onDisplayNameChanged: (String) -> Unit,
+    onUsernameChanged: (String) -> Unit,
     onSignIn: () -> Unit,
     onCreateAccount: () -> Unit,
     modifier: Modifier = Modifier,
@@ -100,6 +104,12 @@ fun LoginScreen(
                     singleLine = true,
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
+                )
+                if (creatingAccount) OutlinedTextField(
+                    colors = fantasyFieldColors(), shape = CutCornerShape(6.dp),
+                    value = username, onValueChange = onUsernameChanged,
+                    label = { Text("Username") }, singleLine = true, enabled = !busy,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 )
                 OutlinedTextField(
                     colors = fantasyFieldColors(),

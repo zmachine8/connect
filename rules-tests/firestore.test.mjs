@@ -12,6 +12,7 @@ const env = await initializeTestEnvironment({
 const alice = env.authenticatedContext('alice').firestore();
 const bob = env.authenticatedContext('bob').firestore();
 const outsider = env.authenticatedContext('charlie').firestore();
+const legacy = env.authenticatedContext('legacy').firestore();
 const guest = env.unauthenticatedContext().firestore();
 const chat = 'alice_bob';
 const chatDoc = (db) => db.doc(`chats/${chat}`);
@@ -21,8 +22,20 @@ try {
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     for (const id of ['alice', 'bob', 'charlie']) {
-      await db.doc(`users/${id}`).set({ displayName: id, createdAt: new Date() });
+      await db.doc(`users/${id}`).set({
+        displayName: id,
+        createdAt: new Date(),
+        username: id,
+        allowRequests: true,
+      });
+      await db.doc(`usernames/${id}`).set({ uid: id });
     }
+    await db.doc('users/legacy').set({ displayName: 'Old Profile', createdAt: new Date() });
+    await db.doc('groups/crew').set({ name: 'Crew', memberIds: ['alice'], createdBy: 'alice', createdAt: new Date() });
+    await db.doc('groups/crew/messages/welcome').set({ senderId: 'alice', senderName: 'alice', text: 'Welcome', createdAt: new Date() });
+    await db.doc('connections/alice_charlie').set({
+      participantIds: ['alice', 'charlie'], requestId: 'seeded-accepted-request', createdAt: new Date(),
+    });
     await chatDoc(db).set({ participantIds: ['alice', 'bob'], createdAt: new Date() });
     await messages(db).doc('first').set({ senderId: 'alice', type: 'text', text: 'Hello', createdAt: new Date() });
   });
@@ -66,6 +79,83 @@ try {
     await assertFails(bob.doc('users/alice').update({ displayName: 'Impostor' }));
     await assertSucceeds(alice.doc('users/alice').update({ displayName: 'Alice' }));
     await assertFails(alice.doc('users/alice').update({ createdAt: new Date() }));
+  });
+
+  await test('legacy profiles without usernames can still be edited or migrated', async () => {
+    await assertSucceeds(legacy.doc('users/legacy').update({ displayName: 'Updated Legacy' }));
+    await assertFails(alice.doc('users/legacy').update({ displayName: 'Cross-account edit' }));
+
+    const batch = legacy.batch();
+    batch.set(legacy.doc('usernames/legacy_user'), { uid: 'legacy' });
+    batch.update(legacy.doc('users/legacy'), {
+      username: 'legacy_user', allowRequests: true,
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  await test('contact requests enforce sender, recipient, and acceptance membership', async () => {
+    const stamp = () => firebase.firestore.FieldValue.serverTimestamp();
+    const requestRef = alice.doc('contactRequests/alice_bob');
+    await assertFails(guest.doc('contactRequests/alice_bob').get());
+    await assertFails(guest.doc('contactRequests/alice_bob').set({
+      senderId: 'alice', senderName: 'alice', recipientId: 'bob', status: 'pending', createdAt: stamp(),
+    }));
+    await assertFails(bob.doc('contactRequests/bob_alice').set({
+      senderId: 'alice', senderName: 'alice', recipientId: 'bob', status: 'pending', createdAt: stamp(),
+    }));
+    await assertFails(alice.doc('contactRequests/alice_missing').set({
+      senderId: 'alice', senderName: 'alice', recipientId: 'missing', status: 'pending', createdAt: stamp(),
+    }));
+    await assertFails(alice.doc('contactRequests/alice_alice').set({
+      senderId: 'alice', senderName: 'alice', recipientId: 'alice', status: 'pending', createdAt: stamp(),
+    }));
+
+    await assertSucceeds(requestRef.set({
+      senderId: 'alice', senderName: 'alice', recipientId: 'bob', status: 'pending', createdAt: stamp(),
+    }));
+    await assertSucceeds(requestRef.get());
+    await assertSucceeds(bob.doc('contactRequests/alice_bob').get());
+    await assertFails(outsider.doc('contactRequests/alice_bob').get());
+    await assertSucceeds(bob.collection('contactRequests').where('recipientId', '==', 'bob').get());
+    await assertFails(outsider.collection('contactRequests').where('recipientId', '==', 'bob').get());
+
+    const batch = bob.batch();
+    batch.update(bob.doc('contactRequests/alice_bob'), { status: 'accepted' });
+    batch.set(bob.doc('connections/alice_bob'), {
+      participantIds: ['alice', 'bob'], requestId: 'alice_bob', createdAt: stamp(),
+    });
+    await assertSucceeds(batch.commit());
+    await assertFails(outsider.doc('connections/alice_bob').get());
+  });
+
+  await test('group membership gates group and message access', async () => {
+    const stamp = () => firebase.firestore.FieldValue.serverTimestamp();
+    await assertSucceeds(alice.doc('groups/crew').get());
+    await assertSucceeds(alice.doc('groups/crew/messages/welcome').get());
+    await assertFails(bob.doc('groups/crew').get());
+    await assertFails(bob.doc('groups/crew/messages/welcome').get());
+    await assertFails(guest.doc('groups/crew').get());
+
+    await assertSucceeds(alice.doc('groups/crew').update({ memberIds: ['alice', 'bob'] }));
+    await assertSucceeds(bob.doc('groups/crew').get());
+    await assertSucceeds(bob.doc('groups/crew/messages/reply').set({
+      senderId: 'bob', senderName: 'bob', text: 'Thanks', createdAt: stamp(),
+    }));
+    await assertFails(bob.doc('groups/crew/messages/forged').set({
+      senderId: 'alice', senderName: 'alice', text: 'Forged sender', createdAt: stamp(),
+    }));
+    await assertFails(outsider.doc('groups/crew/messages/intrusion').set({
+      senderId: 'charlie', senderName: 'charlie', text: 'Not a member', createdAt: stamp(),
+    }));
+    await assertFails(bob.doc('groups/crew').update({ memberIds: ['alice', 'bob', 'charlie'] }));
+    await assertFails(outsider.doc('groups/crew').get());
+
+    await assertSucceeds(alice.doc('groups/created-by-alice').set({
+      name: 'New Group', memberIds: ['alice'], createdBy: 'alice', createdAt: stamp(),
+    }));
+    await assertFails(bob.doc('groups/forged-group').set({
+      name: 'Forged Group', memberIds: ['alice'], createdBy: 'alice', createdAt: stamp(),
+    }));
   });
 
   await test('only participants can read or send small chat photos', async () => {

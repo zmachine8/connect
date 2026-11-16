@@ -19,7 +19,7 @@ class FirebaseUserRepository(
                 val users = snapshot.documents.mapNotNull { document ->
                     val name = document.getString("displayName")
                     if (document.id == myId || name.isNullOrBlank()) null
-                    else ConnectUser(document.id, name, false)
+                    else ConnectUser(document.id, name, null)
                 }.sortedBy { it.displayName.lowercase() }
                 onResult(Result.success(users))
             }

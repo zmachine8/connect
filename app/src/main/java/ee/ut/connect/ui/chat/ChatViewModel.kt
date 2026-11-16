@@ -8,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.firestore.ListenerRegistration
 import ee.ut.connect.data.model.ChatMessage
 import ee.ut.connect.data.repository.FirestoreChatRepository
+import ee.ut.connect.data.repository.UnreadRepository
 
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
@@ -19,6 +20,7 @@ data class ChatUiState(
 )
 
 class ChatViewModel(otherId: String, private val repository: FirestoreChatRepository, private val savedState: SavedStateHandle) : ViewModel() {
+    private val unreadRepository = UnreadRepository()
     var uiState by mutableStateOf(ChatUiState(draft = savedState.get<String>("draft") ?: ""))
         private set
     private var chatId: String? = null
@@ -33,7 +35,7 @@ class ChatViewModel(otherId: String, private val repository: FirestoreChatReposi
                 listener = repository.observe(id) { messages ->
                     if (!active) return@observe
                     uiState = messages.fold(
-                        onSuccess = { uiState.copy(messages = it, loading = false) },
+                        onSuccess = { unreadRepository.markDirectRead(id); uiState.copy(messages = it, loading = false) },
                         onFailure = { uiState.copy(loading = false, error = it.localizedMessage) },
                     )
                 }
