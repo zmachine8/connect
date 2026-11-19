@@ -7,10 +7,12 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Blob
 import ee.ut.connect.data.model.ChatMessage
 
+/** Persists direct-chat messages and exposes realtime Firestore updates. */
 class FirestoreChatRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance(),
 ) {
+    // Sorting makes the conversation ID stable for both participants.
     private fun ids(otherId: String): List<String>? {
         val me = auth.currentUser?.uid ?: return null
         return listOf(me, otherId).sorted()
@@ -37,6 +39,7 @@ class FirestoreChatRepository(
             .addOnFailureListener { callback(Result.failure(it)) }
     }
 
+    /** Observes only the most recent messages to keep the chat lightweight. */
     fun observe(chatId: String, callback: (Result<List<ChatMessage>>) -> Unit): ListenerRegistration =
         db.collection("chats").document(chatId).collection("messages")
             .orderBy("createdAt").limitToLast(30)

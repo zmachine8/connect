@@ -6,10 +6,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 
+/** Per-conversation read position stored for the signed-in user. */
 data class UnreadMarker(val count: Int, val readAtMillis: Long)
+/** Minimal latest-message data used to derive unread badges. */
 data class LatestConversationMessage(val senderId: String, val createdAtMillis: Long)
 
-/** Per-user unread counters. Only the signed-in user's own counters are observable/resettable. */
+/** Observes and updates per-user unread conversation markers. */
 class UnreadRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),

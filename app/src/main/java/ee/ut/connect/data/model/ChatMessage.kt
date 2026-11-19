@@ -1,5 +1,6 @@
 package ee.ut.connect.data.model
 
+/** A chat message with optional media and location metadata. */
 data class ChatMessage(
     val id: String,
     val senderId: String,

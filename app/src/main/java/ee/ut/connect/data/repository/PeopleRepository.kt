@@ -7,8 +7,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import ee.ut.connect.data.model.ConnectUser
 
+/** A pending request to connect with another user. */
 data class ContactRequest(val id: String, val senderId: String, val senderName: String, val isOnline: Boolean? = null)
 
+/** Combined people data assembled from several Firestore listeners. */
 data class PeopleSnapshot(
     val myDisplayName: String,
     val users: List<ConnectUser>,
@@ -20,11 +22,13 @@ data class PeopleSnapshot(
     val hiddenUserIds: Set<String> = emptySet(),
 )
 
+/** Manages search, connections, requests, and blocking relationships. */
 class PeopleRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
 ) {
     fun searchByUsername(value: String, onResult: (Result<List<ConnectUser>>) -> Unit) {
+        // Search the username index first, then load only matching profiles.
         val uid = auth.currentUser?.uid ?: return onResult(Result.failure(IllegalStateException("Sign in first")))
         val prefix = value.trim().removePrefix("@").lowercase()
         if (!prefix.matches(Regex("[a-z0-9_]{2,20}"))) return onResult(Result.success(emptyList()))

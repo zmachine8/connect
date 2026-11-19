@@ -5,9 +5,12 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
+/** Group metadata displayed in the people screen. */
 data class ConnectGroup(val id: String, val name: String, val memberIds: List<String>, val createdBy: String, val unreadCount: Int = 0)
+/** A text message belonging to a group conversation. */
 data class GroupMessage(val id: String, val senderId: String, val senderName: String, val text: String, val createdAt: Long)
 
+/** Reads and writes group membership and group messages in Firestore. */
 class GroupRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),

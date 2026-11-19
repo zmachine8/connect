@@ -25,6 +25,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import ee.ut.connect.notification.ConnectMessagingService
 
+/** Hosts the Compose UI and app-level Firebase/lifecycle integrations. */
 class MainActivity : ComponentActivity() {
     private lateinit var presenceManager: PresenceManager
     private val authStateListener = FirebaseAuth.AuthStateListener { auth ->
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Set up services before composing the app so notifications and presence are ready.
         ConnectMessagingService.createMessageChannel(this)
         presenceManager = PresenceManager()
         lifecycle.addObserver(presenceManager)
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
                     .catch { emit(emptyPreferences()) }
             }
             val preferences by preferencesFlow.collectAsState(initial = emptyPreferences())
+            // Fall back safely if an old or invalid preference is stored.
             val selectedTheme = ConnectThemeStyle.entries.firstOrNull {
                 it.name == preferences[ConnectThemePreferenceKey]
             } ?: ConnectThemeStyle.DARK_FANTASY

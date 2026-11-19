@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
+/** Handles authentication input, validation, and profile creation. */
 class LoginViewModel : ViewModel() {
     private var active = true
     var authenticated by mutableStateOf(false)
@@ -35,6 +36,7 @@ class LoginViewModel : ViewModel() {
         private set
 
     fun submit(createAccount: Boolean) {
+        // Validate locally before making an authentication request.
         if (busy || authenticated) return
         val address = email.trim()
         val name = displayName.trim()
@@ -85,6 +87,7 @@ class LoginViewModel : ViewModel() {
                             profileData["allowRequests"] = true
                         }
                         val saveTask = if (createAccount) {
+                            // Reserve the username and create the profile atomically.
                             val usernameRef = firestore.collection("usernames").document(handle)
                             firestore.runTransaction { transaction ->
                                 val reservation = transaction.get(usernameRef)

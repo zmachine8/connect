@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import java.io.File
 
+/** Keeps attachment data in cache files so configuration changes do not lose it. */
 internal class AttachmentViewModel(application: Application, private val savedState: SavedStateHandle) : AndroidViewModel(application) {
     private val directory = File(application.cacheDir, "draft-attachments").apply { mkdirs() }
     private fun savedFile(key: String) = savedState.get<String>(key)?.let(::File)?.takeIf { it.exists() }
@@ -47,6 +48,7 @@ internal class AttachmentViewModel(application: Application, private val savedSt
         set(value) { savedState["cameraPath"] = value?.absolutePath }
 
     override fun onCleared() {
+        // Remove temporary files when the chat is permanently discarded.
         savedFile("photoPath")?.delete()
         savedFile("documentPath")?.delete()
         pendingFile?.delete()

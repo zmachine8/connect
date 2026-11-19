@@ -16,6 +16,7 @@ import ee.ut.connect.data.repository.PushInstallationRepository
 import ee.ut.connect.ui.theme.ConnectThemeStyle
 import kotlinx.serialization.Serializable
 
+// Typed destinations keep navigation arguments explicit and serializable.
 @Serializable data object LoginDestination
 @Serializable data object UsersDestination
 @Serializable data object ProfileDestination
@@ -26,6 +27,7 @@ import kotlinx.serialization.Serializable
 fun ConnectApp(onThemeChange: (ConnectThemeStyle) -> Unit = {}) {
     val navController = rememberNavController()
     val auth = FirebaseAuth.getInstance()
+    // Auth state determines the initial screen; sign-out replaces the back stack below.
     val startDestination = if (auth.currentUser == null) LoginDestination else UsersDestination
     NavHost(navController = navController, startDestination = startDestination) {
         composable<LoginDestination> {

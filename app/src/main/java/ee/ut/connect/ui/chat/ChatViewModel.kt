@@ -10,6 +10,7 @@ import ee.ut.connect.data.model.ChatMessage
 import ee.ut.connect.data.repository.FirestoreChatRepository
 import ee.ut.connect.data.repository.UnreadRepository
 
+/** Immutable state rendered by the chat screen. */
 data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
     val draft: String = "",
@@ -19,6 +20,7 @@ data class ChatUiState(
     val error: String? = null,
 )
 
+/** Coordinates chat subscriptions, draft persistence, and message sending. */
 class ChatViewModel(otherId: String, private val repository: FirestoreChatRepository, private val savedState: SavedStateHandle) : ViewModel() {
     private val unreadRepository = UnreadRepository()
     var uiState by mutableStateOf(ChatUiState(draft = savedState.get<String>("draft") ?: ""))
@@ -28,6 +30,7 @@ class ChatViewModel(otherId: String, private val repository: FirestoreChatReposi
     private var active = true
 
     init {
+        // Open the stable conversation before subscribing to its messages.
         repository.open(otherId) { result ->
             if (!active) return@open
             result.fold(onSuccess = { id ->

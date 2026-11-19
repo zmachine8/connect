@@ -20,12 +20,14 @@ import ee.ut.connect.data.repository.UnreadRepository
 import ee.ut.connect.data.repository.UnreadMarker
 import ee.ut.connect.data.repository.LatestConversationMessage
 
+/** Loading and result states for the people screen. */
 sealed interface UsersUiState {
     data object Loading : UsersUiState
     data class Success(val people: PeopleSnapshot) : UsersUiState
     data class Error(val message: String) : UsersUiState
 }
 
+/** Coordinates people, group, presence, and unread subscriptions. */
 class UsersViewModel(private val repository: PeopleRepository) : ViewModel() {
     private val groupRepository = GroupRepository()
     private val presenceRepository = PresenceRepository()
@@ -96,6 +98,7 @@ class UsersViewModel(private val repository: PeopleRepository) : ViewModel() {
         ))
     }
 
+    // Keep latest-message listeners aligned with currently visible conversations.
     private fun syncLatestMessageListeners() {
         val wanted = mutableMapOf<String, Pair<Boolean, String>>()
         val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid.orEmpty()

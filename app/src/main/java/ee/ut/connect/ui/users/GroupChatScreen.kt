@@ -14,6 +14,7 @@ import ee.ut.connect.data.repository.GroupRepository
 import ee.ut.connect.ui.theme.AdaptiveContent
 import ee.ut.connect.ui.theme.FantasyBackdrop
 
+/** Displays a realtime group conversation and its composer. */
 @Composable
 fun GroupChatRoute(groupId: String, groupName: String, onBack: () -> Unit) {
     val repository = remember { GroupRepository() }
@@ -21,6 +22,7 @@ fun GroupChatRoute(groupId: String, groupName: String, onBack: () -> Unit) {
     var draft by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val uid = FirebaseAuth.getInstance().currentUser?.uid
+    // The listener lifetime follows the currently opened group.
     DisposableEffect(groupId) {
         val listener = repository.observeMessages(groupId) { result ->
             result.onSuccess { messages = it; error = null; repository.markRead(groupId) }.onFailure { error = it.localizedMessage }

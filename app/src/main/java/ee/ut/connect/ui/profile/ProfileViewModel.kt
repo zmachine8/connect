@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
+/** Loads and validates the signed-in user's profile settings. */
 class ProfileViewModel(private val savedState: SavedStateHandle) : ViewModel() {
     private val currentUser = FirebaseAuth.getInstance().currentUser
     private val uid = currentUser?.uid
@@ -61,6 +62,7 @@ class ProfileViewModel(private val savedState: SavedStateHandle) : ViewModel() {
     fun toggleRequests(value: Boolean) { allowRequests = value; requestsDirty = true }
     fun save() {
         if (busy || loading) return
+        // Keep username reservation and profile changes consistent in one transaction.
         val id = uid ?: return
         val trimmed = name.trim()
         val handle = username.trim().removePrefix("@").lowercase()

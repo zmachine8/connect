@@ -24,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import ee.ut.connect.R
 
+/** Applies the selected theme's background and optional fantasy artwork. */
 @Composable
 fun FantasyBackdrop(login: Boolean = false, chat: Boolean = false, content: @Composable BoxScope.() -> Unit) {
     val style = LocalConnectThemeStyle.current
@@ -40,6 +41,7 @@ fun FantasyBackdrop(login: Boolean = false, chat: Boolean = false, content: @Com
     }
 }
 
+/** Generates a deterministic avatar from the user's name. */
 @Composable
 fun InitialAvatar(name: String, modifier: Modifier = Modifier) {
     val accents = listOf(Color(0xFF65311F), Color(0xFF293C45), Color(0xFF304335), Color(0xFF594022))
@@ -61,6 +63,7 @@ fun fantasyFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
 )
 
+/** Shared primary button with the app's ember styling. */
 @Composable
 fun EmberButton(onClick: () -> Unit, enabled: Boolean = true, modifier: Modifier = Modifier,
                 content: @Composable RowScope.() -> Unit) {

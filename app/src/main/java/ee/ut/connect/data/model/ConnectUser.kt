@@ -1,5 +1,6 @@
 package ee.ut.connect.data.model
 
+/** User data shown in people lists and conversations. */
 data class ConnectUser(
     val id: String,
     val displayName: String,

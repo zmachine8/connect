@@ -16,10 +16,12 @@ import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 
+/** User-selectable visual themes persisted by the activity. */
 enum class ConnectThemeStyle(val label: String) {
     DARK_FANTASY("Dark fantasy"), LIGHT("Light"), MIDNIGHT("Midnight"),
 }
 
+// DataStore keeps the theme choice across app restarts.
 val Context.connectPreferences by preferencesDataStore(name = "connect-settings")
 val ConnectThemePreferenceKey = stringPreferencesKey("theme_style")
 
@@ -69,6 +71,7 @@ private val ConnectTypography = baseTypography.copy(
 )
 @Composable
 fun ConnectTheme(style: ConnectThemeStyle = ConnectThemeStyle.DARK_FANTASY, content: @Composable () -> Unit) {
+    // Keep colors, typography, and shapes in one composition root.
     val colors = when (style) {
         ConnectThemeStyle.DARK_FANTASY -> DarkFantasyColors
         ConnectThemeStyle.LIGHT -> LightColors
